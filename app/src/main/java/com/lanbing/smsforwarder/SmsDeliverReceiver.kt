@@ -10,24 +10,19 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 /**
- * SmsReceiver handles SMS_RECEIVED (when NOT the default SMS app).
- * When this app IS the default SMS app, SmsDeliverReceiver handles SMS_DELIVER instead.
- *
- * This receiver only:
- * 1. Shows an incoming notification
- * 2. Enqueues a ForwardWorker (no network I/O in receiver)
- *
- * Note: Writing to Telephony Provider is NOT done here — when the app is not the default
- * SMS app, it does not have permission to write to the provider.
+ * Receives SMS when this app is set as the default SMS app (SMS_DELIVER action).
+ * Responsibilities:
+ * 1. Write message to the Telephony Provider inbox
+ * 2. Show incoming notification
+ * 3. Enqueue ForwardWorker (no network I/O here)
  */
-class SmsReceiver : BroadcastReceiver() {
+class SmsDeliverReceiver : BroadcastReceiver() {
     companion object {
-        private const val TAG = "SmsReceiver"
+        private const val TAG = "SmsDeliverReceiver"
     }
 
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
-
+        if (intent.action != Telephony.Sms.Intents.SMS_DELIVER_ACTION) return
         val messages = try {
             Telephony.Sms.Intents.getMessagesFromIntent(intent)
         } catch (t: Throwable) {
@@ -48,13 +43,20 @@ class SmsReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                SmsNotificationHelper.notifyIncoming(context, sender, body)
-                ForwardWorker.enqueue(context, sender, body, date)
+                val msgId = SmsRepository.writeInboxMessage(context, sender, body, date)
+                SmsNotificationHelper.notifyIncoming(context, sender, body, -1L)
+                ForwardWorker.enqueue(context, sender, body, date, msgId)
+                LogStore.append(context, "收到短信并写入收件箱 (来自: ${maskPhone(sender)}, id=$msgId)")
             } catch (t: Throwable) {
-                Log.e(TAG, "enqueue failed", t)
+                Log.e(TAG, "processing failed", t)
             } finally {
                 pendingResult.finish()
             }
         }
+    }
+
+    private fun maskPhone(phone: String): String {
+        val digits = phone.filter { it.isDigit() || it == '+' }
+        return if (digits.length > 4) "****${digits.takeLast(4)}" else phone
     }
 }
