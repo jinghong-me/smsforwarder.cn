@@ -937,6 +937,7 @@ fun ConversationListScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ConversationRow(conv: SmsConversation, onClick: () -> Unit) {
     val dateFmt = remember { SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()) }
