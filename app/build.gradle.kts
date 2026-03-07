@@ -102,10 +102,4 @@ dependencies {
 
     // Networking
     implementation("com.squareup.okhttp3:okhttp:$okhttpVersion")
-
-    // WorkManager (replaces goAsync network I/O in BroadcastReceivers)
-    implementation("androidx.work:work-runtime-ktx:2.9.0")
-
-    // ViewModel in Compose
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
 }

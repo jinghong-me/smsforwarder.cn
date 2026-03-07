@@ -26,27 +26,18 @@ object LogStore {
         try {
             val file = logFile(context)
             val time = sdf.format(Date())
-            // Sanitize: redact phone numbers (keep last 4 digits), truncate body if present
-            val sanitized = sanitize(text)
-            val line = "[$time] ${if (sanitized.length > MAX_LINE_LENGTH) sanitized.take(MAX_LINE_LENGTH) + "…(截断)" else sanitized}"
+            val line = "[$time] ${if (text.length > MAX_LINE_LENGTH) text.take(MAX_LINE_LENGTH) + "…(截断)" else text}"
             synchronized(lock) {
+                // 追加新行到文件末尾（我们把最新放在文件最前：为简单，先读旧内容再写新头）
                 val existing = if (file.exists()) file.readText() else ""
                 val newContent = line + "\n" + existing
+                // 限制行数
                 val lines = newContent.lines().filter { it.isNotBlank() }
                 val limited = if (lines.size > MAX_ENTRIES) lines.take(MAX_ENTRIES) else lines
                 file.writeText(limited.joinToString("\n"))
             }
         } catch (t: Throwable) {
             t.printStackTrace()
-        }
-    }
-
-    // Redact phone numbers in log lines: mask all but last 4 digits of 7-15 digit sequences
-    private fun sanitize(text: String): String {
-        return text.replace(Regex("""\+?\d{7,15}""")) { match ->
-            val digits = match.value
-            val last4 = digits.takeLast(4)
-            "${digits.dropLast(4).map { if (it.isDigit()) '*' else it }.joinToString("")}$last4"
         }
     }
 

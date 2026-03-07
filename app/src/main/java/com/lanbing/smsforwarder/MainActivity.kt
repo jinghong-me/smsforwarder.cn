@@ -2,7 +2,6 @@ package com.lanbing.smsforwarder
 
 import android.Manifest
 import android.app.Activity
-import android.app.role.RoleManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -10,7 +9,6 @@ import android.graphics.Color as AndroidColor
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import android.provider.Telephony
 import android.telephony.SubscriptionInfo
 import android.telephony.SubscriptionManager
 import android.widget.Toast
@@ -19,12 +17,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -44,10 +40,8 @@ import androidx.core.view.WindowInsetsControllerCompat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
-import java.text.SimpleDateFormat
 import java.util.*
 
 /**
@@ -68,12 +62,6 @@ class MainActivity : ComponentActivity() {
     private lateinit var requestNotifPermissionLauncher: ActivityResultLauncher<String>
     private lateinit var requestSendSmsPermissionLauncher: ActivityResultLauncher<String>
     private lateinit var requestReadPhoneStateLauncher: ActivityResultLauncher<String>
-    private lateinit var requestReadSmsPermissionLauncher: ActivityResultLauncher<String>
-    private lateinit var requestWriteSmsPermissionLauncher: ActivityResultLauncher<String>
-    private lateinit var requestSmsRoleLauncher: ActivityResultLauncher<Intent>
-
-    // Tracks whether this app is the default SMS app
-    private val isSmsRoleHeld = MutableStateFlow(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -94,15 +82,6 @@ class MainActivity : ComponentActivity() {
             else Toast.makeText(this, "请授予发送短信权限以使用短信通道", Toast.LENGTH_LONG).show()
         }
 
-        requestReadSmsPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (granted) Toast.makeText(this, "读取短信权限已授权", Toast.LENGTH_SHORT).show()
-            else Toast.makeText(this, "请授予读取短信权限以查看短信", Toast.LENGTH_LONG).show()
-        }
-
-        requestWriteSmsPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (granted) LogStore.append(this, "写入短信权限已授权")
-        }
-
         // READ_PHONE_STATE result: refresh SIM list immediately if granted.
         requestReadPhoneStateLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             prefs.edit().putBoolean("sim_perm_granted", granted).apply()
@@ -114,21 +93,11 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        requestSmsRoleLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            val held = checkSmsRoleHeld()
-            isSmsRoleHeld.value = held
-            if (held) Toast.makeText(this, "已设为默认短信应用", Toast.LENGTH_SHORT).show()
-            else Toast.makeText(this, "未设为默认短信应用", Toast.LENGTH_SHORT).show()
-        }
-
         // If permission already granted at startup, proactively refresh SIM list so UI can select immediately.
         val initialRead = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED
         if (initialRead) {
             SimHelper.refresh(this)
         }
-
-        // Check current SMS role status
-        isSmsRoleHeld.value = checkSmsRoleHeld()
 
         setContent {
             // Theme selection based on system
@@ -178,12 +147,8 @@ class MainActivity : ComponentActivity() {
                         val already = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED
                         if (already) SimHelper.refresh(this) else requestReadPhoneStateLauncher.launch(Manifest.permission.READ_PHONE_STATE)
                     },
-                    onRequestReadSms = { requestReadSmsPermissionLauncher.launch(Manifest.permission.READ_SMS) },
-                    onRequestSmsRole = { requestSmsRole() },
-                    isSmsRoleHeld = isSmsRoleHeld,
                     onStartService = { startServiceWithNotificationCheck() },
-                    onStopService = { onStopService() },
-                    initialThreadId = intent?.getLongExtra("thread_id", -1L) ?: -1L
+                    onStopService = { onStopService() }
                 )
             }
         }
@@ -192,34 +157,6 @@ class MainActivity : ComponentActivity() {
     private fun onStopService() {
         val svc = Intent(this, SmsForegroundService::class.java)
         stopService(svc)
-    }
-
-    private fun requestSmsRole() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val roleManager = getSystemService(RoleManager::class.java) ?: return
-            if (!roleManager.isRoleHeld(RoleManager.ROLE_SMS)) {
-                val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_SMS)
-                requestSmsRoleLauncher.launch(intent)
-            } else {
-                Toast.makeText(this, "已是默认短信应用", Toast.LENGTH_SHORT).show()
-            }
-        } else {
-            Toast.makeText(this, "请在系统设置中将本应用设为默认短信应用", Toast.LENGTH_LONG).show()
-        }
-    }
-
-    private fun checkSmsRoleHeld(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val roleManager = getSystemService(RoleManager::class.java) ?: return false
-            roleManager.isRoleHeld(RoleManager.ROLE_SMS)
-        } else {
-            // Pre-Q: check via Telephony.Sms.getDefaultSmsPackage
-            try {
-                android.provider.Telephony.Sms.getDefaultSmsPackage(this) == packageName
-            } catch (_: Throwable) {
-                false
-            }
-        }
     }
 
     private fun startServiceWithNotificationCheck() {
@@ -280,12 +217,8 @@ fun SmsForwarderApp(
     onRequestNotificationPermission: () -> Unit,
     onRequestSendSmsPermission: () -> Unit,
     onRequestReadPhoneState: () -> Unit,
-    onRequestReadSms: () -> Unit,
-    onRequestSmsRole: () -> Unit,
-    isSmsRoleHeld: StateFlow<Boolean>,
     onStartService: () -> Unit,
-    onStopService: () -> Unit,
-    initialThreadId: Long = -1L
+    onStopService: () -> Unit
 ) {
     val context = LocalContext.current
     val prefs = context.getSharedPreferences("app_config", Context.MODE_PRIVATE)
@@ -326,18 +259,6 @@ fun SmsForwarderApp(
     var logs by remember { mutableStateOf(LogStore.readAll(context)) }
     var currentTab by remember { mutableStateOf(0) }
 
-    // SMS client state
-    val smsRoleHeld by isSmsRoleHeld.collectAsState()
-    var selectedThreadId by remember { mutableStateOf(if (initialThreadId > 0) initialThreadId else -1L) }
-
-    // If launched with a thread_id, navigate directly to SMS tab and that conversation
-    LaunchedEffect(initialThreadId) {
-        if (initialThreadId > 0) {
-            currentTab = 2
-            selectedThreadId = initialThreadId
-        }
-    }
-
     // Use surfaceVariant as subtle card color; theme aware
     val cardColor = MaterialTheme.colorScheme.surfaceVariant
 
@@ -349,7 +270,6 @@ fun SmsForwarderApp(
             NavigationBar {
                 NavigationBarItem(selected = currentTab == 0, onClick = { currentTab = 0 }, icon = { Icon(Icons.Filled.Tune, contentDescription = "配置") }, label = { Text("配置") })
                 NavigationBarItem(selected = currentTab == 1, onClick = { currentTab = 1 }, icon = { Icon(Icons.Filled.History, contentDescription = "日志") }, label = { Text("日志") })
-                NavigationBarItem(selected = currentTab == 2, onClick = { currentTab = 2 }, icon = { Icon(Icons.Filled.Message, contentDescription = "短信") }, label = { Text("短信") })
             }
         }
     ) { innerPadding ->
@@ -613,7 +533,7 @@ fun SmsForwarderApp(
 
                     item { Spacer(Modifier.height(32.dp)) }
                 }
-            } else if (currentTab == 1) {
+            } else {
                 // Log page: make Card adapt to remaining height by using weight(1f)
                 Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
                     Card(modifier = Modifier
@@ -668,21 +588,6 @@ fun SmsForwarderApp(
                             }
                         }
                     }
-                }
-            } else {
-                // SMS tab (tab index 2)
-                if (selectedThreadId > 0) {
-                    ConversationScreen(
-                        threadId = selectedThreadId,
-                        onBack = { selectedThreadId = -1L }
-                    )
-                } else {
-                    ConversationListScreen(
-                        smsRoleHeld = smsRoleHeld,
-                        onRequestSmsRole = onRequestSmsRole,
-                        onRequestReadSms = onRequestReadSms,
-                        onThreadClick = { threadId -> selectedThreadId = threadId }
-                    )
                 }
             }
 
@@ -874,209 +779,4 @@ private fun saveConfigs(prefs: android.content.SharedPreferences, configs: List<
         arr.put(o)
     }
     prefs.edit().putString("keyword_configs", arr.toString()).apply()
-}
-
-/* ---------- SMS Client: ConversationListScreen ---------- */
-
-@Composable
-fun ConversationListScreen(
-    smsRoleHeld: Boolean,
-    onRequestSmsRole: () -> Unit,
-    onRequestReadSms: () -> Unit,
-    onThreadClick: (Long) -> Unit
-) {
-    val context = LocalContext.current
-    val hasReadSms = ContextCompat.checkSelfPermission(context, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
-    val conversations by SmsRepository.observeConversations(context).collectAsState(initial = emptyList())
-
-    Column(modifier = Modifier.fillMaxSize()) {
-        if (!smsRoleHeld) {
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(12.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Filled.Info, contentDescription = null, tint = MaterialTheme.colorScheme.onErrorContainer)
-                    Spacer(Modifier.width(8.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("未设为默认短信应用", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onErrorContainer)
-                        Text("设为默认后可收发短信并写入收件箱", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
-                    }
-                    TextButton(onClick = onRequestSmsRole) { Text("去设置") }
-                }
-            }
-        }
-        if (!hasReadSms) {
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.Lock, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("需要读取短信权限以显示会话", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
-                    TextButton(onClick = onRequestReadSms) { Text("授权") }
-                }
-            }
-        }
-        if (conversations.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("暂无短信会话", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
-            }
-        } else {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(conversations, key = { it.threadId }) { conv ->
-                    ConversationRow(conv = conv, onClick = { onThreadClick(conv.threadId) })
-                    Divider()
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ConversationRow(conv: SmsConversation, onClick: () -> Unit) {
-    val dateFmt = remember { SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()) }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(Icons.Filled.Person, contentDescription = null, modifier = Modifier.size(40.dp), tint = Color.Gray)
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(conv.address.ifBlank { "未知" }, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                Text(if (conv.date > 0) dateFmt.format(Date(conv.date)) else "", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-            }
-            Spacer(Modifier.height(2.dp))
-            Text(conv.snippet.take(80), style = MaterialTheme.typography.bodySmall, color = Color.Gray, maxLines = 1)
-        }
-        if (conv.unreadCount > 0) {
-            Spacer(Modifier.width(8.dp))
-            Badge { Text(conv.unreadCount.toString()) }
-        }
-    }
-}
-
-/* ---------- SMS Client: ConversationScreen ---------- */
-
-@Composable
-fun ConversationScreen(
-    threadId: Long,
-    onBack: () -> Unit
-) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val messages by SmsRepository.observeMessages(context, threadId).collectAsState(initial = emptyList())
-    var inputText by remember { mutableStateOf("") }
-    val listState = rememberLazyListState()
-    val address = messages.lastOrNull { it.type == 1 }?.address ?: messages.firstOrNull()?.address ?: ""
-
-    // Mark thread read when opened
-    LaunchedEffect(threadId) {
-        SmsRepository.markThreadRead(context, threadId)
-    }
-
-    // Auto-scroll to bottom on new messages
-    LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) {
-            listState.animateScrollToItem(messages.size - 1)
-        }
-    }
-
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Back bar
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, contentDescription = "返回") }
-            Text(address.ifBlank { "短信会话" }, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-        }
-        Divider()
-
-        // Message list
-        LazyColumn(
-            modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
-            state = listState,
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-            contentPadding = PaddingValues(vertical = 8.dp)
-        ) {
-            items(messages, key = { it.id }) { msg ->
-                MessageBubble(msg)
-            }
-        }
-
-        // Input area
-        Divider()
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OutlinedTextField(
-                value = inputText,
-                onValueChange = { inputText = it },
-                modifier = Modifier.weight(1f),
-                placeholder = { Text("输入短信...") },
-                maxLines = 4
-            )
-            Spacer(Modifier.width(8.dp))
-            Button(
-                onClick = {
-                    val body = inputText.trim()
-                    val to = address
-                    if (body.isBlank() || to.isBlank()) return@Button
-                    inputText = ""
-                    scope.launch {
-                        try {
-                            val msgId = SmsRepository.writeSentMessage(context, to, body, System.currentTimeMillis())
-                            SmsSender.send(context, to, body, messageId = msgId)
-                        } catch (t: Throwable) {
-                            LogStore.append(context, "发送失败: ${t.javaClass.simpleName}")
-                        }
-                    }
-                },
-                enabled = inputText.isNotBlank() && address.isNotBlank()
-            ) {
-                Icon(Icons.Filled.Send, contentDescription = "发送")
-            }
-        }
-    }
-}
-
-@Composable
-private fun MessageBubble(msg: SmsMessage) {
-    val isSent = msg.type == Telephony.Sms.MESSAGE_TYPE_SENT
-    val dateFmt = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = if (isSent) Arrangement.End else Arrangement.Start
-    ) {
-        Column(horizontalAlignment = if (isSent) Alignment.End else Alignment.Start) {
-            Surface(
-                shape = MaterialTheme.shapes.medium,
-                color = if (isSent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier.widthIn(max = 280.dp)
-            ) {
-                Text(
-                    text = msg.body,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                    color = if (isSent) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-            Text(
-                text = dateFmt.format(Date(msg.date)),
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray,
-                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-            )
-        }
-    }
 }
