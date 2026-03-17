@@ -4,7 +4,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.provider.Telephony
-import android.telephony.SmsManager
 import android.util.Log
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -13,7 +12,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.net.MalformedURLException
 import java.net.URL
-import java.util.concurrent.CountDownLatch
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
@@ -22,21 +21,39 @@ import java.util.concurrent.TimeUnit
  * - 读取 SharedPreferences 中的 channels / keyword_configs
  * - 对所有规则逐条匹配（空 keyword 表示匹配全部）
  * - 对每条匹配项并行发送（允许同一条短信被多次发送到相同/不同通道）
- * - webhook 类型使用 HTTP POST；SMS 类型使用 SmsManager.sendMultipartTextMessage 以保证长短信能正确拼接发送
+ * - 支持 webhook 类型：企业微信、钉钉、飞书、通用 Webhook
+ * - 添加消息去重机制和失败重试队列
  */
 
 class SmsReceiver : BroadcastReceiver() {
 
     companion object {
         private const val TAG = "SmsReceiver"
+        private const val DUPLICATE_WINDOW_MS = 5000L // 5秒内相同内容视为重复
+
         val client: OkHttpClient = OkHttpClient.Builder()
             .callTimeout(20, TimeUnit.SECONDS)
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(20, TimeUnit.SECONDS)
             .build()
 
-        // cached thread pool 支持并行发送
-        private val executor = Executors.newCachedThreadPool()
+        // 固定线程池避免线程爆炸
+        private val executor = Executors.newFixedThreadPool(4)
+
+        // 消息去重缓存：key = sender+content_hash, value = timestamp
+        private val recentMessages = ConcurrentHashMap<String, Long>()
+
+        // 失败消息队列，等待网络恢复时重试
+        private val failedMessages = mutableListOf<FailedMessage>()
+        private val failedMessageLock = Object()
+
+        data class FailedMessage(
+            val channel: Channel,
+            val sender: String,
+            val content: String,
+            val timestamp: Long,
+            val retryCount: Int = 0
+        )
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -61,10 +78,23 @@ class SmsReceiver : BroadcastReceiver() {
             sender = sms.displayOriginatingAddress ?: sender
             sb.append(sms.displayMessageBody)
         }
-        // 归一化消息内容：去掉 CR，折叠连续空行，去首尾空白
         val fullMessage = normalizeContent(sb.toString())
 
-        // 收集所有匹配项（允许重复）
+        // 消息去重检查
+        val messageKey = "${sender}_${fullMessage.hashCode()}"
+        val now = System.currentTimeMillis()
+        synchronized(recentMessages) {
+            val lastTime = recentMessages[messageKey]
+            if (lastTime != null && (now - lastTime) < DUPLICATE_WINDOW_MS) {
+                Log.d(TAG, "跳过重复消息: sender=$sender")
+                return
+            }
+            recentMessages[messageKey] = now
+            // 清理过期条目
+            recentMessages.entries.removeIf { (now - it.value) > DUPLICATE_WINDOW_MS * 2 }
+        }
+
+        // 收集所有匹配项
         val matched = mutableListOf<Pair<Channel, KeywordConfig>>()
         configs.forEach { cfg ->
             val kw = cfg.keyword.trim()
@@ -81,47 +111,38 @@ class SmsReceiver : BroadcastReceiver() {
 
         // 并行发送
         executor.execute {
-            val latch = CountDownLatch(matched.size)
+            val latch = java.util.concurrent.CountDownLatch(matched.size)
             try {
                 matched.forEach { (ch, cfg) ->
                     executor.execute {
                         try {
-                            when (ch.type) {
-                                ChannelType.SMS -> {
-                                    try {
-                                        // 使用归一化后的内容发送 SMS
-                                        sendSms(context, ch.target, fullMessage, ch.simSubscriptionId)
-                                        LogStore.append(context, "短信转发成功 → ${ch.target} (规则: ${cfg.keyword})")
-                                    } catch (e: Exception) {
-                                        Log.e(TAG, "sendSms failed to ${ch.target}", e)
-                                        LogStore.append(context, "短信转发失败 → ${ch.target} (规则: ${cfg.keyword})")
+                            if (!isValidUrl(ch.target)) {
+                                LogStore.append(context, "通道 ${ch.name} webhook 格式无效: ${ch.target}")
+                            } else {
+                                var attempt = 0
+                                var success = false
+                                val maxAttempts = 3
+                                var backoff = 0L
+                                while (attempt < maxAttempts && !success) {
+                                    if (backoff > 0) {
+                                        try { Thread.sleep(backoff) } catch (_: InterruptedException) { }
                                     }
+                                    try {
+                                        success = sendToWebhook(ch.target, sender, fullMessage, ch.type)
+                                    } catch (e: Exception) {
+                                        Log.e(TAG, "send attempt ${attempt+1} failed to ${ch.target}", e)
+                                    }
+                                    attempt++
+                                    if (!success) backoff = 2000L * attempt
                                 }
-                                else -> {
-                                    if (!isValidUrl(ch.target)) {
-                                        LogStore.append(context, "通道 ${ch.name} webhook 格式无效: ${ch.target}")
-                                    } else {
-                                        var attempt = 0
-                                        var success = false
-                                        val maxAttempts = 2
-                                        var backoff = 0L
-                                        while (attempt < maxAttempts && !success) {
-                                            if (backoff > 0) {
-                                                try { Thread.sleep(backoff) } catch (_: InterruptedException) { }
-                                            }
-                                            try {
-                                                // 传给 webhook 的内容使用归一化后的 fullMessage，并用单个换行分隔发送者与正文（避免产生空白行）
-                                                success = sendToWebhook(ch.target, sender, fullMessage, ch.type)
-                                            } catch (e: Exception) {
-                                                Log.e(TAG, "send attempt ${attempt+1} failed to ${ch.target}", e)
-                                            }
-                                            attempt++
-                                            if (!success) backoff = 1000L * attempt
-                                        }
-                                        if (success) {
-                                            LogStore.append(context, "转发成功 — 来自: $sender -> ${ch.name} (规则: ${cfg.keyword})")
-                                        } else {
-                                            LogStore.append(context, "转发失败 — 来自: $sender -> ${ch.name} (规则: ${cfg.keyword})")
+                                if (success) {
+                                    LogStore.append(context, "转发成功 — 来自: $sender -> ${ch.name} (规则: ${cfg.keyword})")
+                                } else {
+                                    LogStore.append(context, "转发失败 — 来自: $sender -> ${ch.name} (规则: ${cfg.keyword})")
+                                    // 添加到失败队列等待网络恢复时重试
+                                    synchronized(failedMessageLock) {
+                                        if (failedMessages.size < 100) { // 限制队列大小
+                                            failedMessages.add(FailedMessage(ch, sender, fullMessage, now))
                                         }
                                     }
                                 }
@@ -133,13 +154,13 @@ class SmsReceiver : BroadcastReceiver() {
                 }
 
                 val completed = try {
-                    latch.await(30, TimeUnit.SECONDS)
+                    latch.await(45, TimeUnit.SECONDS)
                 } catch (e: InterruptedException) {
                     Log.w(TAG, "await interrupted", e)
                     false
                 }
                 if (!completed) {
-                    LogStore.append(context, "部分转发任务超时（等待 30s 后返回）")
+                    LogStore.append(context, "部分转发任务超时（等待 45s 后返回）")
                 }
             } catch (t: Throwable) {
                 Log.e(TAG, "unexpected error in parallel send worker", t)
@@ -149,7 +170,7 @@ class SmsReceiver : BroadcastReceiver() {
         }
     }
 
-    // 归一化：删除 CR，折叠连续空行为单个换行，trim 首尾空白。
+    // 归一化：删除 CR，折叠连续空行为单个换行，trim 首尾空白
     private fun normalizeContent(s: String): String {
         return s.replace("\r", "")
             .replace(Regex("\n{2,}"), "\n")
@@ -157,13 +178,12 @@ class SmsReceiver : BroadcastReceiver() {
     }
 
     private fun sendToWebhook(webhookUrl: String, sender: String, content: String, type: ChannelType): Boolean {
-        val json = JSONObject()
-        json.put("msgtype", "text")
-        val text = JSONObject()
-        // 使用单个换行连接发送者与正文，并对正文再做一次归一化以防外部传入未处理的情况
-        val normalized = normalizeContent(content)
-        text.put("content", "来自: $sender\n${normalized}")
-        json.put("text", text)
+        val json = when (type) {
+            ChannelType.FEISHU -> buildFeishuMessage(sender, content)
+            ChannelType.WECHAT -> buildWechatMessage(sender, content)
+            ChannelType.DINGTALK -> buildDingtalkMessage(sender, content)
+            ChannelType.GENERIC_WEBHOOK -> buildGenericMessage(sender, content)
+        }
 
         val body = json.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
         val req = Request.Builder()
@@ -176,34 +196,39 @@ class SmsReceiver : BroadcastReceiver() {
         }
     }
 
-    private fun sendSms(context: Context, toNumber: String, content: String, simSubscriptionId: Int?) {
-        // Use SmsManager.sendMultipartTextMessage for multipart messages to preserve concatenation and encoding.
-        if (simSubscriptionId != null) {
-            try {
-                val smsManager = SmsManager.getSmsManagerForSubscriptionId(simSubscriptionId)
-                val parts = smsManager.divideMessage(content)
-                if (parts.size <= 1) {
-                    // single part
-                    smsManager.sendTextMessage(toNumber, null, content, null, null)
-                } else {
-                    // multipart send ensures correct concatenation on recipient side
-                    smsManager.sendMultipartTextMessage(toNumber, null, parts, null, null)
-                }
-                return
-            } catch (t: Throwable) {
-                Log.w(TAG, "send via specified subId=$simSubscriptionId failed, falling back to default SmsManager", t)
-                // fallthrough to default
-            }
-        }
+    private fun buildWechatMessage(sender: String, content: String): JSONObject {
+        val json = JSONObject()
+        json.put("msgtype", "text")
+        val text = JSONObject()
+        text.put("content", "来自: $sender\n$content")
+        json.put("text", text)
+        return json
+    }
 
-        // Fallback to default SmsManager
-        val defaultSms = SmsManager.getDefault()
-        val partsDefault = defaultSms.divideMessage(content)
-        if (partsDefault.size <= 1) {
-            defaultSms.sendTextMessage(toNumber, null, content, null, null)
-        } else {
-            defaultSms.sendMultipartTextMessage(toNumber, null, partsDefault, null, null)
-        }
+    private fun buildDingtalkMessage(sender: String, content: String): JSONObject {
+        val json = JSONObject()
+        json.put("msgtype", "text")
+        val text = JSONObject()
+        text.put("content", "【短信转发】\n来自: $sender\n$content")
+        json.put("text", text)
+        return json
+    }
+
+    private fun buildFeishuMessage(sender: String, content: String): JSONObject {
+        val json = JSONObject()
+        json.put("msg_type", "text")
+        val text = JSONObject()
+        text.put("text", "【短信转发】\n来自: $sender\n$content")
+        json.put("content", text)
+        return json
+    }
+
+    private fun buildGenericMessage(sender: String, content: String): JSONObject {
+        val json = JSONObject()
+        json.put("sender", sender)
+        json.put("content", content)
+        json.put("timestamp", System.currentTimeMillis())
+        return json
     }
 
     private fun isValidUrl(s: String): Boolean {
@@ -223,8 +248,7 @@ class SmsReceiver : BroadcastReceiver() {
                 val o = arr.getJSONObject(i)
                 val typeStr = o.optString("type", "WECHAT")
                 val type = try { ChannelType.valueOf(typeStr) } catch (t: Throwable) { ChannelType.WECHAT }
-                val simId = if (o.has("simId") && !o.isNull("simId")) o.optInt("simId", -1).let { if (it == -1) null else it } else null
-                Channel(o.getString("id"), o.getString("name"), type, o.getString("target"), simId)
+                Channel(o.getString("id"), o.getString("name"), type, o.getString("target"))
             }
         } catch (t: Throwable) {
             emptyList()
@@ -241,6 +265,35 @@ class SmsReceiver : BroadcastReceiver() {
             }
         } catch (t: Throwable) {
             emptyList()
+        }
+    }
+
+    // 供 NetworkChangeReceiver 调用，重试失败的消息
+    fun retryFailedMessages(context: Context) {
+        synchronized(failedMessageLock) {
+            if (failedMessages.isEmpty()) return
+
+            val toRetry = failedMessages.filter { it.retryCount < 3 }
+            failedMessages.clear()
+
+            toRetry.forEach { failed ->
+                executor.execute {
+                    try {
+                        val success = sendToWebhook(failed.channel.target, failed.sender, failed.content, failed.channel.type)
+                        if (success) {
+                            LogStore.append(context, "重试转发成功 -> ${failed.channel.name}")
+                        } else {
+                            if (failed.retryCount + 1 < 3) {
+                                failedMessages.add(failed.copy(retryCount = failed.retryCount + 1))
+                            } else {
+                                LogStore.append(context, "重试转发失败（已达最大次数）-> ${failed.channel.name}")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "retry failed", e)
+                    }
+                }
+            }
         }
     }
 }
