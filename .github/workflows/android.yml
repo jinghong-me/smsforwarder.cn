@@ -22,20 +22,16 @@ jobs:
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
-        continue-on-error: true
 
       - name: Build with Gradle
-        run: ./gradlew assembleDebug --stacktrace || gradle assembleDebug --stacktrace
-        continue-on-error: true
+        run: ./gradlew assembleDebug --stacktrace --warning-mode all
 
       - name: List APK files
         run: find . -name "*.apk" -type f 2>/dev/null || echo "No APK files found"
 
-      - name: Upload APK if exists
+      - name: Upload APK
         uses: actions/upload-artifact@v4
+        if: success()
         with:
           name: sms-forwarder-debug
-          path: |
-            **/*.apk
-            **/build/outputs/apk/**/*.apk
-        continue-on-error: true
+          path: app/build/outputs/apk/debug/*.apk
