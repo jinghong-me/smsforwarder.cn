@@ -26,8 +26,11 @@ jobs:
       - name: Show Gradle version
         run: gradle --version
 
+      - name: Clean build
+        run: gradle clean --no-daemon
+
       - name: Build app (assembleDebug)
-        run: gradle assembleDebug --no-daemon
+        run: gradle assembleDebug --no-daemon --rerun-tasks
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

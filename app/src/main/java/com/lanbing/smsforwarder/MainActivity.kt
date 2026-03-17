@@ -180,7 +180,7 @@ fun SmsForwarderApp(
 
     // UI state
     var logs by remember { mutableStateOf(LogStore.readAll(context)) }
-    var currentTab by remember { mutableStateOf(0) }
+    var currentTab by remember { mutableStateOf<Int>(0) }
     var showTestDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
 
