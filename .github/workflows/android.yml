@@ -18,19 +18,20 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Set up Gradle 8.4
-        uses: gradle/gradle-build-action@v2
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: '8.4'
+          cache-disabled: true
 
       - name: Show Gradle version
         run: gradle --version
 
       - name: Clean build
-        run: gradle clean --no-daemon
+        run: gradle clean
 
       - name: Build app (assembleDebug)
-        run: gradle assembleDebug --no-daemon --rerun-tasks
+        run: gradle assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
