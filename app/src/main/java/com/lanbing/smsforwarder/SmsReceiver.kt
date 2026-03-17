@@ -67,7 +67,8 @@ class SmsReceiver : BroadcastReceiver() {
                 toRetry.forEach { failed ->
                     executor.execute {
                         try {
-                            val success = sendToWebhook(failed.channel.target, failed.sender, failed.content, failed.channel.type)
+                            val receiver = SmsReceiver()
+                            val success = receiver.sendToWebhook(failed.channel.target, failed.sender, failed.content, failed.channel.type)
                             if (success) {
                                 LogStore.append(context, "重试转发成功 -> ${failed.channel.name}")
                             } else {
@@ -83,60 +84,6 @@ class SmsReceiver : BroadcastReceiver() {
                     }
                 }
             }
-        }
-
-        internal fun sendToWebhook(webhookUrl: String, sender: String, content: String, type: ChannelType): Boolean {
-            val json = when (type) {
-                ChannelType.FEISHU -> buildFeishuMessage(sender, content)
-                ChannelType.WECHAT -> buildWechatMessage(sender, content)
-                ChannelType.DINGTALK -> buildDingtalkMessage(sender, content)
-                ChannelType.GENERIC_WEBHOOK -> buildGenericMessage(sender, content)
-            }
-
-            val body = json.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
-            val req = Request.Builder()
-                .url(webhookUrl)
-                .post(body)
-                .build()
-
-            client.newCall(req).execute().use { resp ->
-                return resp.isSuccessful
-            }
-        }
-
-        private fun buildWechatMessage(sender: String, content: String): JSONObject {
-            val json = JSONObject()
-            json.put("msgtype", "text")
-            val text = JSONObject()
-            text.put("content", "来自: $sender\n$content")
-            json.put("text", text)
-            return json
-        }
-
-        private fun buildDingtalkMessage(sender: String, content: String): JSONObject {
-            val json = JSONObject()
-            json.put("msgtype", "text")
-            val text = JSONObject()
-            text.put("content", "【短信转发】\n来自: $sender\n$content")
-            json.put("text", text)
-            return json
-        }
-
-        private fun buildFeishuMessage(sender: String, content: String): JSONObject {
-            val json = JSONObject()
-            json.put("msg_type", "text")
-            val text = JSONObject()
-            text.put("text", "【短信转发】\n来自: $sender\n$content")
-            json.put("content", text)
-            return json
-        }
-
-        private fun buildGenericMessage(sender: String, content: String): JSONObject {
-            val json = JSONObject()
-            json.put("sender", sender)
-            json.put("content", content)
-            json.put("timestamp", System.currentTimeMillis())
-            return json
         }
     }
 
@@ -212,7 +159,7 @@ class SmsReceiver : BroadcastReceiver() {
                                         try { Thread.sleep(backoff) } catch (_: InterruptedException) { }
                                     }
                                     try {
-                                        success = Companion.sendToWebhook(ch.target, sender, fullMessage, ch.type)
+                                        success = sendToWebhook(ch.target, sender, fullMessage, ch.type)
                                     } catch (e: Exception) {
                                         Log.e(TAG, "send attempt ${attempt+1} failed to ${ch.target}", e)
                                     }
@@ -259,6 +206,60 @@ class SmsReceiver : BroadcastReceiver() {
         return s.replace("\r", "")
             .replace(Regex("\n{2,}"), "\n")
             .trim()
+    }
+
+    private fun sendToWebhook(webhookUrl: String, sender: String, content: String, type: ChannelType): Boolean {
+        val json = when (type) {
+            ChannelType.FEISHU -> buildFeishuMessage(sender, content)
+            ChannelType.WECHAT -> buildWechatMessage(sender, content)
+            ChannelType.DINGTALK -> buildDingtalkMessage(sender, content)
+            ChannelType.GENERIC_WEBHOOK -> buildGenericMessage(sender, content)
+        }
+
+        val body = json.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
+        val req = Request.Builder()
+            .url(webhookUrl)
+            .post(body)
+            .build()
+
+        client.newCall(req).execute().use { resp ->
+            return resp.isSuccessful
+        }
+    }
+
+    private fun buildWechatMessage(sender: String, content: String): JSONObject {
+        val json = JSONObject()
+        json.put("msgtype", "text")
+        val text = JSONObject()
+        text.put("content", "来自: $sender\n$content")
+        json.put("text", text)
+        return json
+    }
+
+    private fun buildDingtalkMessage(sender: String, content: String): JSONObject {
+        val json = JSONObject()
+        json.put("msgtype", "text")
+        val text = JSONObject()
+        text.put("content", "【短信转发】\n来自: $sender\n$content")
+        json.put("text", text)
+        return json
+    }
+
+    private fun buildFeishuMessage(sender: String, content: String): JSONObject {
+        val json = JSONObject()
+        json.put("msg_type", "text")
+        val text = JSONObject()
+        text.put("text", "【短信转发】\n来自: $sender\n$content")
+        json.put("content", text)
+        return json
+    }
+
+    private fun buildGenericMessage(sender: String, content: String): JSONObject {
+        val json = JSONObject()
+        json.put("sender", sender)
+        json.put("content", content)
+        json.put("timestamp", System.currentTimeMillis())
+        return json
     }
 
     private fun isValidUrl(s: String): Boolean {
