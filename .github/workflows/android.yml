@@ -31,9 +31,17 @@ jobs:
         run: gradle clean
 
       - name: Build app (assembleDebug)
-        run: gradle assembleDebug --stacktrace
+        run: gradle assembleDebug --info 2>&1 | tee build.log
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
 
       - name: Upload APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: sms-forwarder-debug
