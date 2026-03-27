@@ -65,7 +65,7 @@ android {
     }
     // 与下面的 Compose 版本保持一致
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.6"
+        kotlinCompilerExtensionVersion = "1.5.5"
     }
 }
 
