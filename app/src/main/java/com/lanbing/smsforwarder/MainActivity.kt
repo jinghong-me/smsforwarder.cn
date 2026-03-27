@@ -138,7 +138,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 fun isValidWebhookUrl(url: String): Boolean {
     return try {
         val u = java.net.URL(url)
@@ -148,6 +147,7 @@ fun isValidWebhookUrl(url: String): Boolean {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SmsForwarderApp(
     onRequestSmsPermission: () -> Unit,
