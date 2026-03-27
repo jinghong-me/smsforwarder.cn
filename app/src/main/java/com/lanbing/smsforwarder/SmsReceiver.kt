@@ -9,7 +9,9 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 import java.net.MalformedURLException
 import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
@@ -23,59 +25,152 @@ import java.util.concurrent.TimeUnit
  * - 对每条匹配项并行发送（允许同一条短信被多次发送到相同/不同通道）
  * - 支持 webhook 类型：企业微信、钉钉、飞书、通用 Webhook
  * - 添加消息去重机制和失败重试队列
+ * - 失败消息持久化到文件
  */
 
 class SmsReceiver : BroadcastReceiver() {
 
     companion object {
         private const val TAG = "SmsReceiver"
-        private const val DUPLICATE_WINDOW_MS = 5000L // 5秒内相同内容视为重复
 
         val client: OkHttpClient = OkHttpClient.Builder()
-            .callTimeout(20, TimeUnit.SECONDS)
-            .connectTimeout(10, TimeUnit.SECONDS)
-            .readTimeout(20, TimeUnit.SECONDS)
+            .callTimeout(Constants.CALL_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .connectTimeout(Constants.CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .readTimeout(Constants.READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .build()
 
         // 固定线程池避免线程爆炸
-        private val executor = Executors.newFixedThreadPool(4)
+        private val executor = Executors.newFixedThreadPool(Constants.THREAD_POOL_SIZE)
 
         // 消息去重缓存：key = sender+content_hash, value = timestamp
         private val recentMessages = ConcurrentHashMap<String, Long>()
+        private var lastCleanupTime = 0L
+        private const val CLEANUP_INTERVAL_MS = 60000L // 1分钟清理一次
 
         // 失败消息队列，等待网络恢复时重试
         private val failedMessages = mutableListOf<FailedMessage>()
         private val failedMessageLock = Object()
 
         data class FailedMessage(
-            val channel: Channel,
+            val channelId: String,
+            val channelName: String,
+            val channelType: String,
+            val channelTarget: String,
             val sender: String,
             val content: String,
             val timestamp: Long,
             val retryCount: Int = 0
-        )
+        ) {
+            fun toJSONObject(): JSONObject {
+                val obj = JSONObject()
+                obj.put("channelId", channelId)
+                obj.put("channelName", channelName)
+                obj.put("channelType", channelType)
+                obj.put("channelTarget", channelTarget)
+                obj.put("sender", sender)
+                obj.put("content", content)
+                obj.put("timestamp", timestamp)
+                obj.put("retryCount", retryCount)
+                return obj
+            }
+
+            companion object {
+                fun fromJSONObject(obj: JSONObject): FailedMessage {
+                    return FailedMessage(
+                        channelId = obj.getString("channelId"),
+                        channelName = obj.getString("channelName"),
+                        channelType = obj.getString("channelType"),
+                        channelTarget = obj.getString("channelTarget"),
+                        sender = obj.getString("sender"),
+                        content = obj.getString("content"),
+                        timestamp = obj.getLong("timestamp"),
+                        retryCount = obj.getInt("retryCount")
+                    )
+                }
+
+                fun fromChannel(channel: Channel, sender: String, content: String, timestamp: Long, retryCount: Int = 0): FailedMessage {
+                    return FailedMessage(
+                        channelId = channel.id,
+                        channelName = channel.name,
+                        channelType = channel.type.name,
+                        channelTarget = channel.target,
+                        sender = sender,
+                        content = content,
+                        timestamp = timestamp,
+                        retryCount = retryCount
+                    )
+                }
+            }
+
+            fun toChannel(): Channel {
+                val type = try { ChannelType.valueOf(channelType) } catch (t: Throwable) { ChannelType.WECHAT }
+                return Channel(channelId, channelName, type, channelTarget)
+            }
+        }
+
+        private fun failedMessagesFile(context: Context): File {
+            return File(context.filesDir, Constants.FAILED_MESSAGES_FILE)
+        }
+
+        private fun saveFailedMessages(context: Context) {
+            synchronized(failedMessageLock) {
+                try {
+                    val file = failedMessagesFile(context)
+                    val arr = JSONArray()
+                    failedMessages.take(Constants.MAX_FAILED_MESSAGES).forEach { arr.put(it.toJSONObject()) }
+                    file.writeText(arr.toString())
+                } catch (t: Throwable) {
+                    Log.e(TAG, "Failed to save failed messages", t)
+                }
+            }
+        }
+
+        private fun loadFailedMessages(context: Context) {
+            synchronized(failedMessageLock) {
+                try {
+                    val file = failedMessagesFile(context)
+                    if (!file.exists()) return
+                    val arr = JSONArray(file.readText())
+                    failedMessages.clear()
+                    for (i in 0 until arr.length()) {
+                        failedMessages.add(FailedMessage.fromJSONObject(arr.getJSONObject(i)))
+                    }
+                } catch (t: Throwable) {
+                    Log.e(TAG, "Failed to load failed messages", t)
+                }
+            }
+        }
+
+        private fun cleanupRecentMessages() {
+            val now = System.currentTimeMillis()
+            if (now - lastCleanupTime < CLEANUP_INTERVAL_MS) return
+            lastCleanupTime = now
+            recentMessages.entries.removeIf { (now - it.value) > Constants.DUPLICATE_WINDOW_MS * 2 }
+        }
 
         // 供 NetworkChangeReceiver 调用，重试失败的消息
         @JvmStatic
         fun retryFailedMessages(context: Context) {
+            loadFailedMessages(context)
             synchronized(failedMessageLock) {
                 if (failedMessages.isEmpty()) return
 
-                val toRetry = failedMessages.filter { it.retryCount < 3 }
+                val toRetry = failedMessages.filter { it.retryCount < Constants.MAX_RETRY_ATTEMPTS }
                 failedMessages.clear()
 
                 toRetry.forEach { failed ->
                     executor.execute {
                         try {
                             val receiver = SmsReceiver()
-                            val success = receiver.sendToWebhook(failed.channel.target, failed.sender, failed.content, failed.channel.type)
+                            val channel = failed.toChannel()
+                            val success = receiver.sendToWebhook(failed.channelTarget, failed.sender, failed.content, channel.type)
                             if (success) {
-                                LogStore.append(context, "重试转发成功 -> ${failed.channel.name}")
+                                LogStore.append(context, "重试转发成功 -> ${failed.channelName}")
                             } else {
-                                if (failed.retryCount + 1 < 3) {
+                                if (failed.retryCount + 1 < Constants.MAX_RETRY_ATTEMPTS) {
                                     failedMessages.add(failed.copy(retryCount = failed.retryCount + 1))
                                 } else {
-                                    LogStore.append(context, "重试转发失败（已达最大次数）-> ${failed.channel.name}")
+                                    LogStore.append(context, "重试转发失败（已达最大次数）-> ${failed.channelName}")
                                 }
                             }
                         } catch (e: Exception) {
@@ -83,6 +178,7 @@ class SmsReceiver : BroadcastReceiver() {
                         }
                     }
                 }
+                saveFailedMessages(context)
             }
         }
     }
@@ -90,8 +186,8 @@ class SmsReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Telephony.Sms.Intents.SMS_RECEIVED_ACTION) return
 
-        val prefs = context.getSharedPreferences("app_config", Context.MODE_PRIVATE)
-        val isEnabled = prefs.getBoolean("enabled", false)
+        val prefs = context.getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE)
+        val isEnabled = prefs.getBoolean(Constants.PREF_ENABLED, false)
         if (!isEnabled) return
 
         val channels = loadChannels(prefs)
@@ -115,14 +211,13 @@ class SmsReceiver : BroadcastReceiver() {
         val messageKey = "${sender}_${fullMessage.hashCode()}"
         val now = System.currentTimeMillis()
         synchronized(recentMessages) {
+            cleanupRecentMessages()
             val lastTime = recentMessages[messageKey]
-            if (lastTime != null && (now - lastTime) < DUPLICATE_WINDOW_MS) {
+            if (lastTime != null && (now - lastTime) < Constants.DUPLICATE_WINDOW_MS) {
                 Log.d(TAG, "跳过重复消息: sender=$sender")
                 return
             }
             recentMessages[messageKey] = now
-            // 清理过期条目
-            recentMessages.entries.removeIf { (now - it.value) > DUPLICATE_WINDOW_MS * 2 }
         }
 
         // 收集所有匹配项
@@ -138,6 +233,9 @@ class SmsReceiver : BroadcastReceiver() {
 
         if (matched.isEmpty()) return
 
+        // 加载持久化的失败消息
+        loadFailedMessages(context)
+
         val pendingResult = goAsync()
 
         // 并行发送
@@ -152,9 +250,8 @@ class SmsReceiver : BroadcastReceiver() {
                             } else {
                                 var attempt = 0
                                 var success = false
-                                val maxAttempts = 3
                                 var backoff = 0L
-                                while (attempt < maxAttempts && !success) {
+                                while (attempt < Constants.MAX_RETRY_ATTEMPTS && !success) {
                                     if (backoff > 0) {
                                         try { Thread.sleep(backoff) } catch (_: InterruptedException) { }
                                     }
@@ -164,7 +261,7 @@ class SmsReceiver : BroadcastReceiver() {
                                         Log.e(TAG, "send attempt ${attempt+1} failed to ${ch.target}", e)
                                     }
                                     attempt++
-                                    if (!success) backoff = 2000L * attempt
+                                    if (!success) backoff = Constants.INITIAL_RETRY_BACKOFF_MS * attempt
                                 }
                                 if (success) {
                                     LogStore.append(context, "转发成功 — 来自: $sender -> ${ch.name} (规则: ${cfg.keyword})")
@@ -172,8 +269,8 @@ class SmsReceiver : BroadcastReceiver() {
                                     LogStore.append(context, "转发失败 — 来自: $sender -> ${ch.name} (规则: ${cfg.keyword})")
                                     // 添加到失败队列等待网络恢复时重试
                                     synchronized(failedMessageLock) {
-                                        if (failedMessages.size < 100) { // 限制队列大小
-                                            failedMessages.add(FailedMessage(ch, sender, fullMessage, now))
+                                        if (failedMessages.size < Constants.MAX_FAILED_MESSAGES) {
+                                            failedMessages.add(FailedMessage.fromChannel(ch, sender, fullMessage, now))
                                         }
                                     }
                                 }
@@ -185,14 +282,17 @@ class SmsReceiver : BroadcastReceiver() {
                 }
 
                 val completed = try {
-                    latch.await(45, TimeUnit.SECONDS)
+                    latch.await(Constants.BROADCAST_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 } catch (e: InterruptedException) {
                     Log.w(TAG, "await interrupted", e)
                     false
                 }
                 if (!completed) {
-                    LogStore.append(context, "部分转发任务超时（等待 45s 后返回）")
+                    LogStore.append(context, "部分转发任务超时（等待 ${Constants.BROADCAST_TIMEOUT_SECONDS}s 后返回）")
                 }
+
+                // 保存失败消息
+                saveFailedMessages(context)
             } catch (t: Throwable) {
                 Log.e(TAG, "unexpected error in parallel send worker", t)
             } finally {
@@ -272,7 +372,7 @@ class SmsReceiver : BroadcastReceiver() {
     }
 
     private fun loadChannels(prefs: android.content.SharedPreferences): List<Channel> {
-        val arrStr = prefs.getString("channels", "[]") ?: "[]"
+        val arrStr = prefs.getString(Constants.PREF_CHANNELS, "[]") ?: "[]"
         return try {
             val arr = org.json.JSONArray(arrStr)
             (0 until arr.length()).map { i ->
@@ -287,7 +387,7 @@ class SmsReceiver : BroadcastReceiver() {
     }
 
     private fun loadConfigs(prefs: android.content.SharedPreferences): List<KeywordConfig> {
-        val arrStr = prefs.getString("keyword_configs", "[]") ?: "[]"
+        val arrStr = prefs.getString(Constants.PREF_KEYWORD_CONFIGS, "[]") ?: "[]"
         return try {
             val arr = org.json.JSONArray(arrStr)
             (0 until arr.length()).map { i ->

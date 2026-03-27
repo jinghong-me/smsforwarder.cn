@@ -21,12 +21,10 @@ import android.util.Log
 class SmsForegroundService : Service() {
 
     companion object {
-        const val CHANNEL_ID = "sms_forwarder_channel"
-        const val CHANNEL_NAME = "短信转发服务"
-        const val NOTIF_ID = 1423
         const val ACTION_UPDATE = "com.lanbing.smsforwarder.ACTION_LOG_UPDATED"
         const val ACTION_STOP = "com.lanbing.smsforwarder.ACTION_STOP_SERVICE"
         private const val TAG = "SmsForegroundService"
+        private var lastNotificationUpdateTime = 0L
     }
 
     private val updateReceiver = object : BroadcastReceiver() {
@@ -65,7 +63,11 @@ class SmsForegroundService : Service() {
                 val nm = getSystemService(NotificationManager::class.java)
                 if (nm != null) {
                     val importance = NotificationManager.IMPORTANCE_HIGH
-                    val channel = NotificationChannel(CHANNEL_ID, CHANNEL_NAME, importance)
+                    val channel = NotificationChannel(
+                        Constants.NOTIFICATION_CHANNEL_ID,
+                        Constants.NOTIFICATION_CHANNEL_NAME,
+                        importance
+                    )
                     channel.setShowBadge(false)
                     channel.lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
                     nm.createNotificationChannel(channel)
@@ -79,12 +81,20 @@ class SmsForegroundService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // 检查通知权限
+        if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) {
+            Log.w(TAG, "Notification permission not granted, cannot start foreground service")
+            LogStore.append(applicationContext, "错误：缺少通知权限，无法启动前台服务")
+            stopSelf()
+            return START_NOT_STICKY
+        }
+
         val notification: Notification = try {
             buildNotification()
         } catch (t: Throwable) {
             Log.w(TAG, "buildNotification failed, use fallback", t)
             // fallback: 直接使用编译时资源，确保 smallIcon 不会回退到系统占位
-            NotificationCompat.Builder(this, CHANNEL_ID)
+            NotificationCompat.Builder(this, Constants.NOTIFICATION_CHANNEL_ID)
                 .setContentTitle("短信转发助手")
                 .setContentText("服务正在运行")
                 .setSmallIcon(R.drawable.ic_stat_notification)
@@ -96,13 +106,13 @@ class SmsForegroundService : Service() {
             if (Build.VERSION.SDK_INT >= 34) {
                 val type = getRemoteMessagingForegroundServiceType()
                 if (type != 0) {
-                    startForeground(NOTIF_ID, notification, type)
+                    startForeground(Constants.NOTIFICATION_ID, notification, type)
                 } else {
                     Log.w(TAG, "FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING not found via reflection, calling startForeground without type")
-                    startForeground(NOTIF_ID, notification)
+                    startForeground(Constants.NOTIFICATION_ID, notification)
                 }
             } else {
-                startForeground(NOTIF_ID, notification)
+                startForeground(Constants.NOTIFICATION_ID, notification)
             }
         } catch (t: Throwable) {
             Log.w(TAG, "startForeground failed, stopping service", t)
@@ -113,7 +123,7 @@ class SmsForegroundService : Service() {
 
         try {
             val nm = getSystemService(NotificationManager::class.java)
-            val channel = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) nm?.getNotificationChannel(CHANNEL_ID) else null
+            val channel = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) nm?.getNotificationChannel(Constants.NOTIFICATION_CHANNEL_ID) else null
             val chInfo = if (channel != null) "channel(${channel.id}): importance=${channel.importance} name=${channel.name}" else "channel:null"
             val notifAllowed = NotificationManagerCompat.from(this).areNotificationsEnabled()
             LogStore.append(applicationContext, "DEBUG: notifAllowed=$notifAllowed ; $chInfo")
@@ -123,7 +133,7 @@ class SmsForegroundService : Service() {
 
         try {
             val nm2 = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
-            nm2?.notify(NOTIF_ID, notification)
+            nm2?.notify(Constants.NOTIFICATION_ID, notification)
         } catch (t: Throwable) {
             Log.w(TAG, "extra notify failed", t)
         }
@@ -156,15 +166,15 @@ class SmsForegroundService : Service() {
     }
 
     private fun buildNotification(): Notification {
-        val prefs = getSharedPreferences("app_config", Context.MODE_PRIVATE)
-        val enabled = prefs.getBoolean("enabled", false)
+        val prefs = getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE)
+        val enabled = prefs.getBoolean(Constants.PREF_ENABLED, false)
         val status = if (enabled) "已启用" else "已禁用"
         val latest = LogStore.latest(this)
 
-        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(this, Constants.NOTIFICATION_CHANNEL_ID)
             .setContentTitle("短信转发助手 - $status")
             .setContentText(latest)
-            .setSmallIcon(R.drawable.ic_stat_notification) // <- 强制使用单色 small icon
+            .setSmallIcon(R.drawable.ic_stat_notification)
             .setOngoing(true)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -222,9 +232,15 @@ class SmsForegroundService : Service() {
     }
 
     private fun updateNotification() {
+        val now = System.currentTimeMillis()
+        if (now - lastNotificationUpdateTime < Constants.NOTIFICATION_UPDATE_THROTTLE_MS) {
+            Log.d(TAG, "Skipping notification update due to throttling")
+            return
+        }
+        lastNotificationUpdateTime = now
         try {
             val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            nm.notify(NOTIF_ID, buildNotification())
+            nm.notify(Constants.NOTIFICATION_ID, buildNotification())
         } catch (t: Throwable) {
             Log.w(TAG, "updateNotification failed", t)
         }

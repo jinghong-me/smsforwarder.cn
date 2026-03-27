@@ -15,29 +15,42 @@ class NetworkChangeReceiver : BroadcastReceiver() {
 
     companion object {
         private const val TAG = "NetworkChangeReceiver"
+        private var lastRetryTime = 0L
+        private var lastNetworkState = false
     }
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != ConnectivityManager.CONNECTIVITY_ACTION) return
 
-        if (isNetworkAvailable(context)) {
+        val isAvailable = isNetworkAvailable(context)
+        val now = System.currentTimeMillis()
+
+        // 防抖处理：只在网络从不可用变为可用，且距离上次重试超过 NETWORK_DEBOUNCE_MS 时才重试
+        if (isAvailable && !lastNetworkState && (now - lastRetryTime > Constants.NETWORK_DEBOUNCE_MS)) {
             Log.d(TAG, "网络已恢复，触发失败消息重试")
-            // 触发重试
+            lastRetryTime = now
             SmsReceiver.retryFailedMessages(context)
         }
+
+        lastNetworkState = isAvailable
     }
 
     private fun isNetworkAvailable(context: Context): Boolean {
-        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val network = connectivityManager.activeNetwork ?: return false
-            val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
-            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-                    capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-        } else {
-            @Suppress("DEPRECATION")
-            val networkInfo = connectivityManager.activeNetworkInfo
-            networkInfo?.isConnected == true
+        return try {
+            val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val network = connectivityManager.activeNetwork ?: return false
+                val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+                capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                        capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+            } else {
+                @Suppress("DEPRECATION")
+                val networkInfo = connectivityManager.activeNetworkInfo
+                networkInfo?.isConnected == true
+            }
+        } catch (t: Throwable) {
+            Log.e(TAG, "Error checking network availability", t)
+            false
         }
     }
 }

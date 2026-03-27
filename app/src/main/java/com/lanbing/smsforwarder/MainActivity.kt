@@ -65,7 +65,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val prefs = getSharedPreferences("app_config", Context.MODE_PRIVATE)
+        val prefs = getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE)
 
         requestSmsPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             if (granted) Toast.makeText(this, "短信权限已授权", Toast.LENGTH_SHORT).show()
@@ -139,6 +139,15 @@ class MainActivity : ComponentActivity() {
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
+fun isValidWebhookUrl(url: String): Boolean {
+    return try {
+        val u = java.net.URL(url)
+        (u.protocol == "http" || u.protocol == "https") && u.host.isNotBlank()
+    } catch (e: java.net.MalformedURLException) {
+        false
+    }
+}
+
 @Composable
 fun SmsForwarderApp(
     onRequestSmsPermission: () -> Unit,
@@ -147,10 +156,10 @@ fun SmsForwarderApp(
     onStopService: () -> Unit
 ) {
     val context = LocalContext.current
-    val prefs = context.getSharedPreferences("app_config", Context.MODE_PRIVATE)
+    val prefs = context.getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE)
 
-    var isEnabled by remember { mutableStateOf(prefs.getBoolean("enabled", false)) }
-    var startOnBoot by remember { mutableStateOf(prefs.getBoolean("start_on_boot", false)) }
+    var isEnabled by remember { mutableStateOf(prefs.getBoolean(Constants.PREF_ENABLED, false)) }
+    var startOnBoot by remember { mutableStateOf(prefs.getBoolean(Constants.PREF_START_ON_BOOT, false)) }
 
     var channels by remember { mutableStateOf(loadChannels(prefs)) }
     var configs by remember { mutableStateOf(loadConfigs(prefs)) }
@@ -245,7 +254,7 @@ fun SmsForwarderApp(
                     isEnabled = isEnabled,
                     onEnabledChange = { checked ->
                         isEnabled = checked
-                        prefs.edit().putBoolean("enabled", isEnabled).apply()
+                        prefs.edit().putBoolean(Constants.PREF_ENABLED, isEnabled).apply()
                         if (checked) {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                 val hasNotif = ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
@@ -264,7 +273,7 @@ fun SmsForwarderApp(
                     startOnBoot = startOnBoot,
                     onStartOnBootChange = {
                         startOnBoot = it
-                        prefs.edit().putBoolean("start_on_boot", startOnBoot).apply()
+                        prefs.edit().putBoolean(Constants.PREF_START_ON_BOOT, startOnBoot).apply()
                         if (startOnBoot) LogStore.append(context, "已开启开机启动") else LogStore.append(context, "已关闭开机启动")
                     },
                     smsGranted = smsGranted,
@@ -293,6 +302,10 @@ fun SmsForwarderApp(
                     onAddChannel = {
                         if (newChannelName.isBlank() || newChannelTarget.isBlank()) {
                             Toast.makeText(context, "请填写通道名称和 Webhook 地址", Toast.LENGTH_SHORT).show()
+                            return@ConfigTab
+                        }
+                        if (!isValidWebhookUrl(newChannelTarget)) {
+                            Toast.makeText(context, "Webhook 地址格式无效，请输入有效的 http:// 或 https:// 地址", Toast.LENGTH_SHORT).show()
                             return@ConfigTab
                         }
                         val newChannel = Channel(UUID.randomUUID().toString(), newChannelName.trim(), newChannelType, newChannelTarget.trim())
@@ -1157,7 +1170,7 @@ fun getChannelTypeLabel(type: ChannelType): String = when (type) {
 }
 
 private fun loadChannels(prefs: android.content.SharedPreferences): List<Channel> {
-    val arrStr = prefs.getString("channels", "[]") ?: "[]"
+    val arrStr = prefs.getString(Constants.PREF_CHANNELS, "[]") ?: "[]"
     return try {
         val arr = JSONArray(arrStr)
         (0 until arr.length()).map { i ->
@@ -1181,11 +1194,11 @@ private fun saveChannels(prefs: android.content.SharedPreferences, channels: Lis
         o.put("target", it.target)
         arr.put(o)
     }
-    prefs.edit().putString("channels", arr.toString()).apply()
+    prefs.edit().putString(Constants.PREF_CHANNELS, arr.toString()).apply()
 }
 
 private fun loadConfigs(prefs: android.content.SharedPreferences): List<KeywordConfig> {
-    val arrStr = prefs.getString("keyword_configs", "[]") ?: "[]"
+    val arrStr = prefs.getString(Constants.PREF_KEYWORD_CONFIGS, "[]") ?: "[]"
     return try {
         val arr = JSONArray(arrStr)
         (0 until arr.length()).map { i ->
@@ -1206,5 +1219,5 @@ private fun saveConfigs(prefs: android.content.SharedPreferences, configs: List<
         o.put("channelId", it.channelId)
         arr.put(o)
     }
-    prefs.edit().putString("keyword_configs", arr.toString()).apply()
+    prefs.edit().putString(Constants.PREF_KEYWORD_CONFIGS, arr.toString()).apply()
 }
