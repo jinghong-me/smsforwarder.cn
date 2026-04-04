@@ -9,15 +9,15 @@ android {
 
     defaultConfig {
         applicationId = "com.lanbing.smsforwarder"
-        minSdk = 26
+        minSdk = 21
         targetSdk = 34
 
         // 1) 优先读取 Gradle property，再读取环境变量；没有时回退到默认值
         val versionNameFromProp = (project.findProperty("VERSION_NAME") ?: System.getenv("VERSION_NAME"))?.toString()
         val versionCodeFromProp = (project.findProperty("VERSION_CODE") ?: System.getenv("VERSION_CODE"))?.toString()
 
-        versionName = versionNameFromProp ?: "2.5.2"
-        versionCode = (versionCodeFromProp?.toIntOrNull() ?: 14)
+        versionName = versionNameFromProp ?: "2.6.0"
+        versionCode = (versionCodeFromProp?.toIntOrNull() ?: 15)
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
