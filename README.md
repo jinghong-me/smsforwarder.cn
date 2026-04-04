@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-2.0.2-blue.svg)
+![Version](https://img.shields.io/badge/version-2.1.2-blue.svg)
 ![Android](https://img.shields.io/badge/Android-8.0%2B-brightgreen.svg)
 ![License](https://img.shields.io/badge/license-MIT-orange.svg)
 [![GitHub Stars](https://img.shields.io/github/stars/lanbing1989/sms-forwarder?style=social)](https://github.com/lanbing1989/sms-forwarder/stargazers)
@@ -43,7 +43,9 @@
 ### 最新版本
 | 版本 | 说明 | 下载链接 |
 |------|------|----------|
-| **v2.0.2** | 统一消息前缀格式 | [Releases](https://github.com/lanbing1989/sms-forwarder/releases) |
+| **v2.1.2** | 调整验证码显示顺序，优化消息格式 | [Releases](https://github.com/lanbing1989/sms-forwarder/releases) |
+| v2.1.0 | 验证码自动提取与突出显示 | [Releases](https://github.com/lanbing1989/sms-forwarder/releases) |
+| v2.0.2 | 统一消息前缀格式 | [Releases](https://github.com/lanbing1989/sms-forwarder/releases) |
 | v2.0.1 | 多关键词、多通道 | [v2.0.1](https://github.com/lanbing1989/sms-forwarder/releases/tag/v2.0.1) |
 | v1.1 | 多关键词、单通道 | [v1.1](https://github.com/lanbing1989/sms-forwarder/releases/tag/1.1) |
 
@@ -159,6 +161,17 @@ A: 检查：
 - 变更目的与实现要点
 - 隐私/合规影响（若处理敏感数据）
 - 测试设备/Android 版本
+
+---
+
+## 📝 变更记录
+
+| 版本 | 发布日期 | 说明 |
+|------|----------|------|
+| **v2.1.0** | 2026-04-04 | 新增验证码自动提取与突出显示功能 |
+| v2.0.2 | - | 统一所有渠道消息前缀格式 |
+| v2.0.1 | - | 多关键词、多通道支持 |
+| v1.1 | - | 初始版本 |
 
 ---
 

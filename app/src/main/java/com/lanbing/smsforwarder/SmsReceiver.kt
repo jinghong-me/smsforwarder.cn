@@ -327,11 +327,55 @@ class SmsReceiver : BroadcastReceiver() {
         }
     }
 
+    /**
+     * 从短信内容中提取验证码
+     * 匹配常见验证码格式：4-8位数字，可能带有"验证码"、"校验码"等关键词
+     */
+    private fun extractVerificationCode(content: String): String? {
+        // 常见的验证码关键词
+        val keywords = listOf("验证码", "校验码", "动态码", "验证 code", "verification code", "verify code")
+        val hasKeyword = keywords.any { content.contains(it, ignoreCase = true) }
+
+        // 优先匹配带有验证码关键词附近的4-8位数字
+        if (hasKeyword) {
+            // 匹配关键词附近的4-8位数字
+            val pattern1 = Regex("""(?:验证码|校验码|动态码|验证|verification|verify).{0,20}(\d{4,8})""", RegexOption.IGNORE_CASE)
+            pattern1.find(content)?.let { return it.groupValues[1] }
+        }
+
+        // 匹配独立的4-8位数字（作为备选）
+        val pattern2 = Regex("""\b(\d{4,8})\b""")
+        val matches = pattern2.findAll(content).map { it.groupValues[1] }.toList()
+
+        // 如果有多个匹配，优先选择在验证码关键词附近的
+        if (matches.isNotEmpty()) {
+            if (hasKeyword) {
+                return matches.firstOrNull()
+            }
+            // 如果没有关键词但有多个数字组合，返回第一个
+            return matches.firstOrNull()
+        }
+
+        return null
+    }
+
+    /**
+     * 构建消息内容，突出显示验证码
+     */
+    private fun buildMessageWithHighlightedCode(sender: String, content: String): String {
+        val code = extractVerificationCode(content)
+        return if (code != null) {
+            "验证码: $code\n来自: $sender\n$content"
+        } else {
+            "来自: $sender\n$content"
+        }
+    }
+
     private fun buildWechatMessage(sender: String, content: String): JSONObject {
         val json = JSONObject()
         json.put("msgtype", "text")
         val text = JSONObject()
-        text.put("content", "来自: $sender\n$content")
+        text.put("content", buildMessageWithHighlightedCode(sender, content))
         json.put("text", text)
         return json
     }
@@ -340,7 +384,7 @@ class SmsReceiver : BroadcastReceiver() {
         val json = JSONObject()
         json.put("msgtype", "text")
         val text = JSONObject()
-        text.put("content", "来自: $sender\n$content")
+        text.put("content", buildMessageWithHighlightedCode(sender, content))
         json.put("text", text)
         return json
     }
@@ -349,7 +393,7 @@ class SmsReceiver : BroadcastReceiver() {
         val json = JSONObject()
         json.put("msg_type", "text")
         val text = JSONObject()
-        text.put("text", "来自: $sender\n$content")
+        text.put("text", buildMessageWithHighlightedCode(sender, content))
         json.put("content", text)
         return json
     }
@@ -358,6 +402,7 @@ class SmsReceiver : BroadcastReceiver() {
         val json = JSONObject()
         json.put("sender", sender)
         json.put("content", content)
+        json.put("verificationCode", extractVerificationCode(content))
         json.put("timestamp", System.currentTimeMillis())
         return json
     }
