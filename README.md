@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-2.4.0-blue.svg)
+![Version](https://img.shields.io/badge/version-2.5.1-blue.svg)
 ![Android](https://img.shields.io/badge/Android-8.0%2B-brightgreen.svg)
 ![License](https://img.shields.io/badge/license-MIT-orange.svg)
 [![GitHub Stars](https://img.shields.io/github/stars/jinghong-me/sms-forwarder?style=social)](https://github.com/jinghong-me/sms-forwarder/stargazers)
@@ -48,7 +48,10 @@
 ### 最新版本
 | 版本 | 说明 | 下载链接 |
 |------|------|----------|
-| **v2.4.0** | 新增自定义 SIM 号码功能，无法自动获取时支持手动输入 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
+| **v2.5.1** | 修复自定义 SIM 号码显示逻辑问题，避免重复出现 SIM 卡 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
+| v2.5.0 | 新增底部导航栏，将功能分为首页、关键词、通道、设置、日志5个标签页 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
+| v2.4.1 | 优化自定义 SIM 号码功能，添加更清晰的使用提示 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
+| v2.4.0 | 新增自定义 SIM 号码功能，无法自动获取时支持手动输入 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
 | v2.3.0 | 新增消息格式配置选项、SIM 卡信息预览 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
 | v2.2.0 | 新增本机号码识别，双卡设备支持显示接收短信号码 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
 | v2.1.3 | 修复验证码识别错误，优化提取逻辑 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
@@ -177,7 +180,10 @@ A: 检查：
 
 | 版本 | 发布日期 | 说明 |
 |------|----------|------|
-| **v2.4.0** | 2026-04-04 | 新增自定义 SIM 号码功能，无法自动获取时支持手动输入 |
+| **v2.5.1** | 2026-04-04 | 修复自定义 SIM 号码显示逻辑问题，避免重复出现 SIM 卡 |
+| v2.5.0 | 2026-04-04 | 新增底部导航栏，将功能分为首页、关键词、通道、设置、日志5个标签页 |
+| v2.4.1 | 2026-04-04 | 优化自定义 SIM 号码功能，添加更清晰的使用提示 |
+| v2.4.0 | 2026-04-04 | 新增自定义 SIM 号码功能，无法自动获取时支持手动输入 |
 | v2.3.0 | 2026-04-04 | 新增消息格式配置选项、SIM 卡信息预览 |
 | v2.2.0 | 2026-04-04 | 新增本机号码识别，双卡设备支持显示接收短信号码 |
 | v2.1.3 | 2026-04-04 | 修复验证码识别错误，优化提取逻辑 |

@@ -202,6 +202,15 @@ fun SmsForwarderApp(
     var currentTab by remember { mutableStateOf<Int>(0) }
     var showTestDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
+    
+    // 定义5个标签页
+    val tabs = listOf(
+        "首页" to Icons.Default.Home,
+        "关键词" to Icons.Default.Label,
+        "通道" to Icons.Default.Cloud,
+        "设置" to Icons.Default.Settings,
+        "日志" to Icons.Default.History
+    )
 
     // Permission states
     val smsGranted = ContextCompat.checkSelfPermission(context, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
@@ -283,28 +292,35 @@ fun SmsForwarderApp(
                 containerColor = MaterialTheme.colorScheme.surface,
                 tonalElevation = 8.dp
             ) {
-                NavigationBarItem(
-                    selected = currentTab == 0,
-                    onClick = { currentTab = 0 },
-                    icon = {
-                        Icon(
-                            if (currentTab == 0) Icons.Filled.Tune else Icons.Outlined.Tune,
-                            contentDescription = "配置"
-                        )
-                    },
-                    label = { Text("配置") }
-                )
-                NavigationBarItem(
-                    selected = currentTab == 1,
-                    onClick = { currentTab = 1 },
-                    icon = {
-                        Icon(
-                            if (currentTab == 1) Icons.Filled.History else Icons.Outlined.History,
-                            contentDescription = "日志"
-                        )
-                    },
-                    label = { Text("日志") }
-                )
+                tabs.forEachIndexed { index, (label, icon) ->
+                    NavigationBarItem(
+                        selected = currentTab == index,
+                        onClick = { currentTab = index },
+                        icon = {
+                            val filledIcon = when (index) {
+                                0 -> Icons.Filled.Home
+                                1 -> Icons.Filled.Label
+                                2 -> Icons.Filled.Cloud
+                                3 -> Icons.Filled.Settings
+                                4 -> Icons.Filled.History
+                                else -> Icons.Filled.Home
+                            }
+                            val outlinedIcon = when (index) {
+                                0 -> Icons.Outlined.Home
+                                1 -> Icons.Outlined.Label
+                                2 -> Icons.Outlined.Cloud
+                                3 -> Icons.Outlined.Settings
+                                4 -> Icons.Outlined.History
+                                else -> Icons.Outlined.Home
+                            }
+                            Icon(
+                                if (currentTab == index) filledIcon else outlinedIcon,
+                                contentDescription = label
+                            )
+                        },
+                        label = { Text(label) }
+                    )
+                }
             }
         }
     ) { innerPadding ->
@@ -318,7 +334,7 @@ fun SmsForwarderApp(
                 label = "tabAnimation"
             ) { tabIndex ->
                 when (tabIndex) {
-                    0 -> ConfigTab(
+                    0 -> HomeTab(
                         isEnabled = isEnabled,
                         onEnabledChange = { checked ->
                             isEnabled = checked
@@ -337,12 +353,6 @@ fun SmsForwarderApp(
                                 LogStore.append(context, "服务已停止（由用户关闭）")
                             }
                             context.sendBroadcast(Intent(SmsForegroundService.ACTION_UPDATE))
-                        },
-                        startOnBoot = startOnBoot,
-                        onStartOnBootChange = {
-                            startOnBoot = it
-                            prefs.edit().putBoolean(Constants.PREF_START_ON_BOOT, startOnBoot).apply()
-                            if (startOnBoot) LogStore.append(context, "已开启开机启动") else LogStore.append(context, "已关闭开机启动")
                         },
                         showReceiverPhone = showReceiverPhone,
                         onShowReceiverPhoneChange = {
@@ -374,9 +384,46 @@ fun SmsForwarderApp(
                                 }
                                 context.startActivity(intent)
                             }
-                        },
+                        }
+                    )
+                    1 -> KeywordTab(
                         channels = channels,
                         configs = configs,
+                        newKeywordInput = newKeywordInput,
+                        onNewKeywordInputChange = { newKeywordInput = it },
+                        selectedChannelIdForNewCfg = selectedChannelIdForNewCfg,
+                        onSelectedChannelIdForNewCfgChange = { selectedChannelIdForNewCfg = it },
+                        configChannelDropdownExpanded = configChannelDropdownExpanded,
+                        onConfigChannelDropdownExpandedChange = { configChannelDropdownExpanded = it },
+                        onAddConfig = {
+                            if (channels.isEmpty()) {
+                                Toast.makeText(context, "请先添加通道", Toast.LENGTH_SHORT).show()
+                                return@KeywordTab
+                            }
+                            if (selectedChannelIdForNewCfg.isBlank()) {
+                                Toast.makeText(context, "请选择通道", Toast.LENGTH_SHORT).show()
+                                return@KeywordTab
+                            }
+                            val newCfg = KeywordConfig(UUID.randomUUID().toString(), newKeywordInput.trim(), selectedChannelIdForNewCfg)
+                            configs = configs + newCfg
+                            saveConfigs(prefs, configs)
+                            newKeywordInput = ""
+                            LogStore.append(context, "添加关键词: ${newCfg.keyword} -> ${channels.find { it.id == newCfg.channelId }?.name}")
+                            Toast.makeText(context, "配置已添加", Toast.LENGTH_SHORT).show()
+                        },
+                        onDeleteConfig = { cfg ->
+                            configs = configs.filterNot { it.id == cfg.id }
+                            saveConfigs(prefs, configs)
+                        },
+                        onEditConfig = { cfg ->
+                            editingConfig = cfg
+                            editConfigKeyword = cfg.keyword
+                            editConfigChannelId = cfg.channelId
+                            showConfigDialog = true
+                        }
+                    )
+                    2 -> ChannelTab(
+                        channels = channels,
                         newChannelName = newChannelName,
                         onNewChannelNameChange = { newChannelName = it },
                         newChannelTarget = newChannelTarget,
@@ -388,11 +435,11 @@ fun SmsForwarderApp(
                         onAddChannel = {
                             if (newChannelName.isBlank() || newChannelTarget.isBlank()) {
                                 Toast.makeText(context, "请填写通道名称和 Webhook 地址", Toast.LENGTH_SHORT).show()
-                                return@ConfigTab
+                                return@ChannelTab
                             }
                             if (!isValidWebhookUrl(newChannelTarget)) {
                                 Toast.makeText(context, "Webhook 地址格式无效，请输入有效的 http:// 或 https:// 地址", Toast.LENGTH_SHORT).show()
-                                return@ConfigTab
+                                return@ChannelTab
                             }
                             val newChannel = Channel(UUID.randomUUID().toString(), newChannelName.trim(), newChannelType, newChannelTarget.trim())
                             channels = channels + newChannel
@@ -416,41 +463,19 @@ fun SmsForwarderApp(
                             editChannelTarget = ch.target
                             editChannelType = ch.type
                             showChannelDialog = true
-                        },
-                        newKeywordInput = newKeywordInput,
-                        onNewKeywordInputChange = { newKeywordInput = it },
-                        selectedChannelIdForNewCfg = selectedChannelIdForNewCfg,
-                        onSelectedChannelIdForNewCfgChange = { selectedChannelIdForNewCfg = it },
-                        configChannelDropdownExpanded = configChannelDropdownExpanded,
-                        onConfigChannelDropdownExpandedChange = { configChannelDropdownExpanded = it },
-                        onAddConfig = {
-                            if (channels.isEmpty()) {
-                                Toast.makeText(context, "请先添加通道", Toast.LENGTH_SHORT).show()
-                                return@ConfigTab
-                            }
-                            if (selectedChannelIdForNewCfg.isBlank()) {
-                                Toast.makeText(context, "请选择通道", Toast.LENGTH_SHORT).show()
-                                return@ConfigTab
-                            }
-                            val newCfg = KeywordConfig(UUID.randomUUID().toString(), newKeywordInput.trim(), selectedChannelIdForNewCfg)
-                            configs = configs + newCfg
-                            saveConfigs(prefs, configs)
-                            newKeywordInput = ""
-                            LogStore.append(context, "添加关键词: ${newCfg.keyword} -> ${channels.find { it.id == newCfg.channelId }?.name}")
-                            Toast.makeText(context, "配置已添加", Toast.LENGTH_SHORT).show()
-                        },
-                        onDeleteConfig = { cfg ->
-                            configs = configs.filterNot { it.id == cfg.id }
-                            saveConfigs(prefs, configs)
-                        },
-                        onEditConfig = { cfg ->
-                            editingConfig = cfg
-                            editConfigKeyword = cfg.keyword
-                            editConfigChannelId = cfg.channelId
-                            showConfigDialog = true
                         }
                     )
-                    1 -> LogTab(
+                    3 -> SettingsTab(
+                        startOnBoot = startOnBoot,
+                        onStartOnBootChange = {
+                            startOnBoot = it
+                            prefs.edit().putBoolean(Constants.PREF_START_ON_BOOT, startOnBoot).apply()
+                            if (startOnBoot) LogStore.append(context, "已开启开机启动") else LogStore.append(context, "已关闭开机启动")
+                        },
+                        onShowTestDialog = { showTestDialog = true },
+                        onShowAboutDialog = { showAboutDialog = true }
+                    )
+                    4 -> LogTab(
                         logs = logs,
                         onRefresh = { logs = LogStore.readAll(context) },
                         onClear = {
@@ -1796,9 +1821,35 @@ fun SimCardInfoCard() {
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        "本机号码状态预览（可手动编辑）",
+                        "点击编辑按钮手动输入本机号码",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // 提示信息
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = Color(0xFFFFF3CD).copy(alpha = 0.8f),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Filled.Info,
+                        contentDescription = null,
+                        tint = Color(0xFFF59E0B)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "小米/澎湃OS等定制ROM通常无法自动获取本机号码，请手动输入",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF92400E)
                     )
                 }
             }
@@ -1894,11 +1945,13 @@ private fun getSimCardInfo(context: Context, customSim1Phone: String? = null, cu
             null
         }
 
-        var slotIndex = 0
+        var addedSim1 = false
+        var addedSim2 = false
+        
         if (subscriptionManager != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
             val activeSubscriptions = subscriptionManager.activeSubscriptionInfoList
-            activeSubscriptions?.forEach { subInfo ->
-                slotIndex++
+            activeSubscriptions?.forEachIndexed { index, subInfo ->
+                val slotIndex = index + 1
                 val customPhone = if (slotIndex == 1) customSim1Phone else if (slotIndex == 2) customSim2Phone else null
                 val phoneNumber = customPhone ?: subInfo.number?.takeIf { it.isNotBlank() }
                 simCards.add(
@@ -1908,18 +1961,23 @@ private fun getSimCardInfo(context: Context, customSim1Phone: String? = null, cu
                         isCustom = customPhone != null
                     )
                 )
+                if (slotIndex == 1) addedSim1 = true
+                if (slotIndex == 2) addedSim2 = true
             }
         }
 
-        // 如果没有订阅信息或需要补充，检查是否有自定义号码
-        if (customSim1Phone != null && simCards.none { it.isCustom && slotIndex == 0 }) {
+        // 如果 SIM1 没有添加但有自定义号码，添加
+        if (!addedSim1 && customSim1Phone != null) {
             simCards.add(SimCardInfo(phoneNumber = customSim1Phone, carrierName = null, isCustom = true))
+            addedSim1 = true
         }
-        if (customSim2Phone != null && simCards.size < 2) {
+        // 如果 SIM2 没有添加但有自定义号码，添加
+        if (!addedSim2 && customSim2Phone != null) {
             simCards.add(SimCardInfo(phoneNumber = customSim2Phone, carrierName = null, isCustom = true))
+            addedSim2 = true
         }
 
-        // 回退方案：如果没有获取到 SIM 信息但有自定义号码，显示自定义号码
+        // 回退方案：如果没有获取到任何 SIM 信息但有自定义号码
         if (simCards.isEmpty()) {
             if (customSim1Phone != null) {
                 simCards.add(SimCardInfo(phoneNumber = customSim1Phone, carrierName = null, isCustom = true))
@@ -1950,11 +2008,13 @@ private fun getSimCardInfo(context: Context, customSim1Phone: String? = null, cu
         }
     } catch (e: Exception) {
         e.printStackTrace()
-        // 即使出错，也显示自定义号码
-        if (customSim1Phone != null) {
+        // 即使出错，也显示自定义号码（避免重复添加）
+        val addedSim1InCatch = simCards.any { it.isCustom }
+        if (!addedSim1InCatch && customSim1Phone != null) {
             simCards.add(SimCardInfo(phoneNumber = customSim1Phone, carrierName = null, isCustom = true))
         }
-        if (customSim2Phone != null) {
+        val addedSim2InCatch = simCards.size > 1
+        if (!addedSim2InCatch && customSim2Phone != null) {
             simCards.add(SimCardInfo(phoneNumber = customSim2Phone, carrierName = null, isCustom = true))
         }
     }
@@ -2117,6 +2177,605 @@ fun EditSimPhoneDialog(
             TextButton(onClick = onDismiss) { Text("取消") }
         }
     )
+}
+
+// ========================================
+// 新的标签页组件
+// ========================================
+
+@Composable
+fun HomeTab(
+    isEnabled: Boolean,
+    onEnabledChange: (Boolean) -> Unit,
+    showReceiverPhone: Boolean,
+    onShowReceiverPhoneChange: (Boolean) -> Unit,
+    showSenderPhone: Boolean,
+    onShowSenderPhoneChange: (Boolean) -> Unit,
+    highlightVerificationCode: Boolean,
+    onHighlightVerificationCodeChange: (Boolean) -> Unit,
+    smsGranted: Boolean,
+    notifGranted: Boolean,
+    isIgnoringBatteryOptimizations: Boolean,
+    onRequestSmsPermission: () -> Unit,
+    onRequestNotificationPermission: () -> Unit,
+    onRequestBatteryOptimization: () -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(vertical = 16.dp)
+    ) {
+        // Service Status Card
+        item {
+            ModernCard(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "转发服务",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                val statusColor = if (isEnabled) Color(0xFF10B981) else Color(0xFF9CA3AF)
+                                Box(
+                                    modifier = Modifier
+                                        .size(12.dp)
+                                        .background(statusColor, shape = CircleShape)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    if (isEnabled) "服务运行中" else "服务已停止",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        val switchScale by animateFloatAsState(
+                            targetValue = if (isEnabled) 1.1f else 1f,
+                            animationSpec = spring(stiffness = Spring.StiffnessMedium),
+                            label = "switchAnimation"
+                        )
+                        Switch(
+                            checked = isEnabled,
+                            onCheckedChange = onEnabledChange,
+                            modifier = Modifier.scale(switchScale),
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = Color(0xFF667EEA)
+                            )
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Permission items
+                    PermissionItem(
+                        icon = Icons.Outlined.Notifications,
+                        title = "通知权限",
+                        granted = notifGranted,
+                        onClick = onRequestNotificationPermission
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    PermissionItem(
+                        icon = Icons.Outlined.Sms,
+                        title = "短信权限",
+                        granted = smsGranted,
+                        onClick = onRequestSmsPermission
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    PermissionItem(
+                        icon = Icons.Outlined.BatteryFull,
+                        title = "电池优化白名单",
+                        granted = isIgnoringBatteryOptimizations,
+                        onClick = onRequestBatteryOptimization
+                    )
+                }
+            }
+        }
+
+        // SIM 卡信息卡片
+        item {
+            SimCardInfoCard()
+        }
+
+        // 消息格式配置
+        item {
+            ModernCard(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Text(
+                        "消息格式",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // 显示本机号码
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            Icons.Outlined.Phone,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "显示本机号码",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                "转发时显示接收短信的本机号码",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = showReceiverPhone,
+                            onCheckedChange = onShowReceiverPhoneChange
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // 显示发送者号码
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            Icons.Outlined.Person,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "显示发送者号码",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                "转发时显示短信发送者号码",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = showSenderPhone,
+                            onCheckedChange = onShowSenderPhoneChange
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // 突出显示验证码
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            Icons.Outlined.VpnKey,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "突出显示验证码",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                "自动识别并突出显示短信验证码",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = highlightVerificationCode,
+                            onCheckedChange = onHighlightVerificationCodeChange
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun KeywordTab(
+    channels: List<Channel>,
+    configs: List<KeywordConfig>,
+    newKeywordInput: String,
+    onNewKeywordInputChange: (String) -> Unit,
+    selectedChannelIdForNewCfg: String,
+    onSelectedChannelIdForNewCfgChange: (String) -> Unit,
+    configChannelDropdownExpanded: Boolean,
+    onConfigChannelDropdownExpandedChange: (Boolean) -> Unit,
+    onAddConfig: () -> Unit,
+    onDeleteConfig: (KeywordConfig) -> Unit,
+    onEditConfig: (KeywordConfig) -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(vertical = 16.dp)
+    ) {
+        item {
+            ModernCard {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFF10B981).copy(alpha = 0.1f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Rule,
+                                contentDescription = null,
+                                tint = Color(0xFF10B981)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                "关键词配置",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                "设置转发关键词",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = newKeywordInput,
+                        onValueChange = onNewKeywordInputChange,
+                        label = { Text("输入关键词（留空表示全部）") },
+                        modifier = Modifier.fillMaxWidth(),
+                        leadingIcon = {
+                            Icon(Icons.Outlined.Search, contentDescription = null)
+                        },
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    ExposedDropdownMenuBox(
+                        expanded = configChannelDropdownExpanded,
+                        onExpandedChange = onConfigChannelDropdownExpandedChange
+                    ) {
+                        OutlinedTextField(
+                            value = channels.find { it.id == selectedChannelIdForNewCfg }?.name ?: "选择转发通道",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("转发通道") },
+                            modifier = Modifier.menuAnchor().fillMaxWidth(),
+                            leadingIcon = {
+                                Icon(Icons.Outlined.Send, contentDescription = null)
+                            },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(configChannelDropdownExpanded) },
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        ExposedDropdownMenu(
+                            expanded = configChannelDropdownExpanded,
+                            onDismissRequest = { onConfigChannelDropdownExpandedChange(false) }
+                        ) {
+                            channels.forEach { ch ->
+                                DropdownMenuItem(
+                                    text = { Text(ch.name) },
+                                    onClick = {
+                                        onSelectedChannelIdForNewCfgChange(ch.id)
+                                        onConfigChannelDropdownExpandedChange(false)
+                                    }
+                                )
+                            }
+                            if (channels.isEmpty()) {
+                                DropdownMenuItem(
+                                    text = { Text("请先添加通道") },
+                                    onClick = { onConfigChannelDropdownExpandedChange(false) }
+                                )
+                            }
+                        }
+                    }
+
+                    Button(
+                        onClick = onAddConfig,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(vertical = 14.dp)
+                    ) {
+                        Icon(Icons.Outlined.Add, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("添加配置", fontSize = 16.sp)
+                    }
+
+                    // Config list
+                    if (configs.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        configs.forEach { cfg ->
+                            val chName = channels.find { it.id == cfg.channelId }?.name ?: "(已删除通道)"
+                            ConfigItem(
+                                keyword = cfg.keyword,
+                                channelName = chName,
+                                onEdit = { onEditConfig(cfg) },
+                                onDelete = { onDeleteConfig(cfg) }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ChannelTab(
+    channels: List<Channel>,
+    newChannelName: String,
+    onNewChannelNameChange: (String) -> Unit,
+    newChannelTarget: String,
+    onNewChannelTargetChange: (String) -> Unit,
+    newChannelType: ChannelType,
+    onNewChannelTypeChange: (ChannelType) -> Unit,
+    channelTypeExpanded: Boolean,
+    onChannelTypeExpandedChange: (Boolean) -> Unit,
+    onAddChannel: () -> Unit,
+    onDeleteChannel: (Channel) -> Unit,
+    onEditChannel: (Channel) -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(vertical = 16.dp)
+    ) {
+        item {
+            ModernCard {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFF667EEA).copy(alpha = 0.1f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Cloud,
+                                contentDescription = null,
+                                tint = Color(0xFF667EEA)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                "转发通道管理",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                "添加和管理转发通道",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = newChannelName,
+                        onValueChange = onNewChannelNameChange,
+                        label = { Text("通道名称") },
+                        modifier = Modifier.fillMaxWidth(),
+                        leadingIcon = {
+                            Icon(Icons.Outlined.Label, contentDescription = null)
+                        },
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    ExposedDropdownMenuBox(
+                        expanded = channelTypeExpanded,
+                        onExpandedChange = onChannelTypeExpandedChange
+                    ) {
+                        OutlinedTextField(
+                            value = getChannelTypeLabel(newChannelType),
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("通道类型") },
+                            modifier = Modifier.menuAnchor().fillMaxWidth(),
+                            leadingIcon = {
+                                Icon(Icons.Outlined.Category, contentDescription = null)
+                            },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(channelTypeExpanded) },
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        ExposedDropdownMenu(
+                            expanded = channelTypeExpanded,
+                            onDismissRequest = { onChannelTypeExpandedChange(false) }
+                        ) {
+                            ChannelType.entries.forEach { t ->
+                                DropdownMenuItem(
+                                    text = { Text(getChannelTypeLabel(t)) },
+                                    onClick = {
+                                        onNewChannelTypeChange(t)
+                                        onChannelTypeExpandedChange(false)
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = newChannelTarget,
+                        onValueChange = onNewChannelTargetChange,
+                        label = { Text("Webhook 地址") },
+                        modifier = Modifier.fillMaxWidth(),
+                        leadingIcon = {
+                            Icon(Icons.Outlined.Link, contentDescription = null)
+                        },
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    Button(
+                        onClick = onAddChannel,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(vertical = 14.dp)
+                    ) {
+                        Icon(Icons.Outlined.Add, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("添加通道", fontSize = 16.sp)
+                    }
+
+                    // Channel list
+                    if (channels.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        channels.forEach { ch ->
+                            ChannelItem(
+                                name = ch.name,
+                                type = getChannelTypeLabel(ch.type),
+                                target = ch.target,
+                                onEdit = { onEditChannel(ch) },
+                                onDelete = { onDeleteChannel(ch) }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SettingsTab(
+    startOnBoot: Boolean,
+    onStartOnBootChange: (Boolean) -> Unit,
+    onShowTestDialog: () -> Unit,
+    onShowAboutDialog: () -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(vertical = 16.dp)
+    ) {
+        // 通用设置
+        item {
+            ModernCard(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Text(
+                        "通用设置",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            Icons.Outlined.PowerSettingsNew,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "开机自启动",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                "设备启动后自动运行",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = startOnBoot,
+                            onCheckedChange = onStartOnBootChange
+                        )
+                    }
+                }
+            }
+        }
+
+        // 工具
+        item {
+            ModernCard(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Text(
+                        "工具",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Button(
+                        onClick = onShowTestDialog,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(vertical = 14.dp)
+                    ) {
+                        Icon(Icons.Outlined.Science, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("测试规则", fontSize = 16.sp)
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Button(
+                        onClick = onShowAboutDialog,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(vertical = 14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        )
+                    ) {
+                        Icon(Icons.Outlined.Info, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("关于", fontSize = 16.sp)
+                    }
+                }
+            }
+        }
+    }
 }
 
 fun getChannelTypeLabel(type: ChannelType): String = when (type) {
