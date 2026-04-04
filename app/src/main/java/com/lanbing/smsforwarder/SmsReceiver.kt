@@ -336,24 +336,24 @@ class SmsReceiver : BroadcastReceiver() {
         val keywords = listOf("验证码", "校验码", "动态码", "验证 code", "verification code", "verify code")
         val hasKeyword = keywords.any { content.contains(it, ignoreCase = true) }
 
-        // 优先匹配带有验证码关键词附近的4-8位数字
+        // 优先匹配：关键词后紧跟的 4-8 位数字
         if (hasKeyword) {
-            // 匹配关键词附近的4-8位数字
-            val pattern1 = Regex("""(?:验证码|校验码|动态码|验证|verification|verify).{0,20}(\d{4,8})""", RegexOption.IGNORE_CASE)
+            // 模式1：关键词后面直接跟数字（如"验证码是123456"）
+            val pattern1 = Regex("""(?:验证码|校验码|动态码|验证|verification|verify)[^\d]*(\d{4,8})""", RegexOption.IGNORE_CASE)
             pattern1.find(content)?.let { return it.groupValues[1] }
+
+            // 模式2：关键词附近的数字（关键词后20字符内）
+            val pattern2 = Regex("""(?:验证码|校验码|动态码|验证|verification|verify).{0,30}?(\d{4,8})""", RegexOption.IGNORE_CASE)
+            pattern2.find(content)?.let { return it.groupValues[1] }
         }
 
         // 匹配独立的4-8位数字（作为备选）
-        val pattern2 = Regex("""\b(\d{4,8})\b""")
-        val matches = pattern2.findAll(content).map { it.groupValues[1] }.toList()
+        val pattern3 = Regex("""\b(\d{4,8})\b""")
+        val matches = pattern3.findAll(content).map { it.groupValues[1] }.toList()
 
-        // 如果有多个匹配，优先选择在验证码关键词附近的
+        // 如果有多个匹配，返回最长的那个（更可能是验证码）
         if (matches.isNotEmpty()) {
-            if (hasKeyword) {
-                return matches.firstOrNull()
-            }
-            // 如果没有关键词但有多个数字组合，返回第一个
-            return matches.firstOrNull()
+            return matches.maxByOrNull { it.length }
         }
 
         return null
