@@ -16,8 +16,8 @@ android {
         val versionNameFromProp = (project.findProperty("VERSION_NAME") ?: System.getenv("VERSION_NAME"))?.toString()
         val versionCodeFromProp = (project.findProperty("VERSION_CODE") ?: System.getenv("VERSION_CODE"))?.toString()
 
-        versionName = versionNameFromProp ?: "2.5.1"
-        versionCode = (versionCodeFromProp?.toIntOrNull() ?: 13)
+        versionName = versionNameFromProp ?: "2.5.2"
+        versionCode = (versionCodeFromProp?.toIntOrNull() ?: 14)
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

@@ -354,23 +354,11 @@ fun SmsForwarderApp(
                             }
                             context.sendBroadcast(Intent(SmsForegroundService.ACTION_UPDATE))
                         },
-                        showReceiverPhone = showReceiverPhone,
-                        onShowReceiverPhoneChange = {
-                            showReceiverPhone = it
-                            prefs.edit().putBoolean(Constants.PREF_SHOW_RECEIVER_PHONE, showReceiverPhone).apply()
-                            if (showReceiverPhone) LogStore.append(context, "已开启显示本机号码") else LogStore.append(context, "已关闭显示本机号码")
-                        },
-                        showSenderPhone = showSenderPhone,
-                        onShowSenderPhoneChange = {
-                            showSenderPhone = it
-                            prefs.edit().putBoolean(Constants.PREF_SHOW_SENDER_PHONE, showSenderPhone).apply()
-                            if (showSenderPhone) LogStore.append(context, "已开启显示发送者号码") else LogStore.append(context, "已关闭显示发送者号码")
-                        },
-                        highlightVerificationCode = highlightVerificationCode,
-                        onHighlightVerificationCodeChange = {
-                            highlightVerificationCode = it
-                            prefs.edit().putBoolean(Constants.PREF_HIGHLIGHT_VERIFICATION_CODE, highlightVerificationCode).apply()
-                            if (highlightVerificationCode) LogStore.append(context, "已开启突出显示验证码") else LogStore.append(context, "已关闭突出显示验证码")
+                        startOnBoot = startOnBoot,
+                        onStartOnBootChange = {
+                            startOnBoot = it
+                            prefs.edit().putBoolean(Constants.PREF_START_ON_BOOT, startOnBoot).apply()
+                            if (startOnBoot) LogStore.append(context, "已开启开机启动") else LogStore.append(context, "已关闭开机启动")
                         },
                         smsGranted = smsGranted,
                         notifGranted = notifGranted,
@@ -466,11 +454,23 @@ fun SmsForwarderApp(
                         }
                     )
                     3 -> SettingsTab(
-                        startOnBoot = startOnBoot,
-                        onStartOnBootChange = {
-                            startOnBoot = it
-                            prefs.edit().putBoolean(Constants.PREF_START_ON_BOOT, startOnBoot).apply()
-                            if (startOnBoot) LogStore.append(context, "已开启开机启动") else LogStore.append(context, "已关闭开机启动")
+                        showReceiverPhone = showReceiverPhone,
+                        onShowReceiverPhoneChange = {
+                            showReceiverPhone = it
+                            prefs.edit().putBoolean(Constants.PREF_SHOW_RECEIVER_PHONE, showReceiverPhone).apply()
+                            if (showReceiverPhone) LogStore.append(context, "已开启显示本机号码") else LogStore.append(context, "已关闭显示本机号码")
+                        },
+                        showSenderPhone = showSenderPhone,
+                        onShowSenderPhoneChange = {
+                            showSenderPhone = it
+                            prefs.edit().putBoolean(Constants.PREF_SHOW_SENDER_PHONE, showSenderPhone).apply()
+                            if (showSenderPhone) LogStore.append(context, "已开启显示发送者号码") else LogStore.append(context, "已关闭显示发送者号码")
+                        },
+                        highlightVerificationCode = highlightVerificationCode,
+                        onHighlightVerificationCodeChange = {
+                            highlightVerificationCode = it
+                            prefs.edit().putBoolean(Constants.PREF_HIGHLIGHT_VERIFICATION_CODE, highlightVerificationCode).apply()
+                            if (highlightVerificationCode) LogStore.append(context, "已开启突出显示验证码") else LogStore.append(context, "已关闭突出显示验证码")
                         },
                         onShowTestDialog = { showTestDialog = true },
                         onShowAboutDialog = { showAboutDialog = true }
@@ -2187,12 +2187,8 @@ fun EditSimPhoneDialog(
 fun HomeTab(
     isEnabled: Boolean,
     onEnabledChange: (Boolean) -> Unit,
-    showReceiverPhone: Boolean,
-    onShowReceiverPhoneChange: (Boolean) -> Unit,
-    showSenderPhone: Boolean,
-    onShowSenderPhoneChange: (Boolean) -> Unit,
-    highlightVerificationCode: Boolean,
-    onHighlightVerificationCodeChange: (Boolean) -> Unit,
+    startOnBoot: Boolean,
+    onStartOnBootChange: (Boolean) -> Unit,
     smsGranted: Boolean,
     notifGranted: Boolean,
     isIgnoringBatteryOptimizations: Boolean,
@@ -2278,117 +2274,38 @@ fun HomeTab(
                         granted = isIgnoringBatteryOptimizations,
                         onClick = onRequestBatteryOptimization
                     )
-                }
-            }
-        }
 
-        // SIM 卡信息卡片
-        item {
-            SimCardInfoCard()
-        }
+                    Spacer(modifier = Modifier.height(20.dp))
 
-        // 消息格式配置
-        item {
-            ModernCard(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Text(
-                        "消息格式",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
+                    HorizontalDivider()
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // 显示本机号码
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(
-                            Icons.Outlined.Phone,
+                            Icons.Outlined.PowerSettingsNew,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                "显示本机号码",
+                                "开机自启动",
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Medium
                             )
                             Text(
-                                "转发时显示接收短信的本机号码",
+                                "设备启动后自动运行",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         Switch(
-                            checked = showReceiverPhone,
-                            onCheckedChange = onShowReceiverPhoneChange
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // 显示发送者号码
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(
-                            Icons.Outlined.Person,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                "显示发送者号码",
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                "转发时显示短信发送者号码",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = showSenderPhone,
-                            onCheckedChange = onShowSenderPhoneChange
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // 突出显示验证码
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(
-                            Icons.Outlined.VpnKey,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                "突出显示验证码",
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium
-                            )
-                            Text(
-                                "自动识别并突出显示短信验证码",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Switch(
-                            checked = highlightVerificationCode,
-                            onCheckedChange = onHighlightVerificationCodeChange
+                            checked = startOnBoot,
+                            onCheckedChange = onStartOnBootChange
                         )
                     }
                 }
@@ -2675,8 +2592,12 @@ fun ChannelTab(
 
 @Composable
 fun SettingsTab(
-    startOnBoot: Boolean,
-    onStartOnBootChange: (Boolean) -> Unit,
+    showReceiverPhone: Boolean,
+    onShowReceiverPhoneChange: (Boolean) -> Unit,
+    showSenderPhone: Boolean,
+    onShowSenderPhoneChange: (Boolean) -> Unit,
+    highlightVerificationCode: Boolean,
+    onHighlightVerificationCodeChange: (Boolean) -> Unit,
     onShowTestDialog: () -> Unit,
     onShowAboutDialog: () -> Unit
 ) {
@@ -2687,45 +2608,113 @@ fun SettingsTab(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(vertical = 16.dp)
     ) {
-        // 通用设置
+        // SIM 卡信息卡片
+        item {
+            SimCardInfoCard()
+        }
+
+        // 消息格式配置
         item {
             ModernCard(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
                     Text(
-                        "通用设置",
+                        "消息格式",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    // 显示本机号码
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(
-                            Icons.Outlined.PowerSettingsNew,
+                            Icons.Outlined.Phone,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                "开机自启动",
+                                "显示本机号码",
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Medium
                             )
                             Text(
-                                "设备启动后自动运行",
+                                "转发时显示接收短信的本机号码",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                         Switch(
-                            checked = startOnBoot,
-                            onCheckedChange = onStartOnBootChange
+                            checked = showReceiverPhone,
+                            onCheckedChange = onShowReceiverPhoneChange
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // 显示发送者号码
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            Icons.Outlined.Person,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "显示发送者号码",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                "转发时显示短信发送者号码",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = showSenderPhone,
+                            onCheckedChange = onShowSenderPhoneChange
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // 突出显示验证码
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            Icons.Outlined.VpnKey,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "突出显示验证码",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                "自动识别并突出显示短信验证码",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = highlightVerificationCode,
+                            onCheckedChange = onHighlightVerificationCodeChange
                         )
                     }
                 }
