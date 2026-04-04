@@ -224,18 +224,14 @@ class SmsReceiver : BroadcastReceiver() {
         val messages = Telephony.Sms.Intents.getMessagesFromIntent(intent)
         val sb = StringBuilder()
         var sender = ""
-        var subscriptionId = -1
         for (sms in messages) {
             sender = sms.displayOriginatingAddress ?: sender
             sb.append(sms.displayMessageBody)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
-                subscriptionId = sms.subscriptionId
-            }
         }
         val fullMessage = normalizeContent(sb.toString())
 
         // 获取接收短信的本机号码
-        val receiverPhoneNumber = if (showReceiverPhone) getReceiverPhoneNumber(context, subscriptionId) else null
+        val receiverPhoneNumber = if (showReceiverPhone) getReceiverPhoneNumber(context) else null
 
         // 消息去重检查
         val messageKey = "${sender}_${fullMessage.hashCode()}"
@@ -341,22 +337,23 @@ class SmsReceiver : BroadcastReceiver() {
     /**
      * 获取接收短信的本机号码
      */
-    private fun getReceiverPhoneNumber(context: Context, subscriptionId: Int): String? {
+    private fun getReceiverPhoneNumber(context: Context): String? {
         try {
             val prefs = context.getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE)
             
-            // 优先使用用户自定义的 SIM 号码
-            if (subscriptionId != -1) {
-                val customSimPhone = if (subscriptionId == 1) {
-                    prefs.getString(Constants.PREF_CUSTOM_SIM1_PHONE, null)
-                } else {
-                    prefs.getString(Constants.PREF_CUSTOM_SIM2_PHONE, null)
-                }
-                if (!customSimPhone.isNullOrBlank()) {
-                    return customSimPhone
-                }
+            // 优先使用用户自定义的 SIM1 号码
+            val customSim1Phone = prefs.getString(Constants.PREF_CUSTOM_SIM1_PHONE, null)
+            if (!customSim1Phone.isNullOrBlank()) {
+                return customSim1Phone
+            }
+            
+            // 如果 SIM1 没有自定义，尝试 SIM2
+            val customSim2Phone = prefs.getString(Constants.PREF_CUSTOM_SIM2_PHONE, null)
+            if (!customSim2Phone.isNullOrBlank()) {
+                return customSim2Phone
             }
 
+            // 如果没有自定义号码，尝试自动获取
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
                 Log.d(TAG, "没有 READ_PHONE_STATE 权限，无法获取本机号码")
                 return null
@@ -364,18 +361,7 @@ class SmsReceiver : BroadcastReceiver() {
 
             val telephonyManager = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1 && subscriptionId != -1) {
-                val subscriptionManager = SubscriptionManager.from(context)
-                val subscriptionInfo = subscriptionManager.getActiveSubscriptionInfo(subscriptionId)
-                if (subscriptionInfo != null) {
-                    val number = subscriptionInfo.number
-                    if (!number.isNullOrBlank()) {
-                        return number
-                    }
-                }
-            }
-
-            // 回退方案：尝试获取默认的手机号码
+            // 尝试获取默认的手机号码
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 val number = telephonyManager.line1Number
                 if (!number.isNullOrBlank()) {
@@ -387,11 +373,6 @@ class SmsReceiver : BroadcastReceiver() {
                 if (!number.isNullOrBlank()) {
                     return number
                 }
-            }
-
-            // 如果无法获取号码，尝试通过 subscriptionId 显示 SIM 卡槽信息
-            if (subscriptionId != -1) {
-                return "SIM卡${if (subscriptionId == 1) "1" else "2"}"
             }
         } catch (e: Exception) {
             Log.e(TAG, "获取本机号码失败", e)
