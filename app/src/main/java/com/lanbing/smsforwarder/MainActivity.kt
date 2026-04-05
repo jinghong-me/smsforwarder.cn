@@ -53,15 +53,9 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.*
-import java.util.concurrent.TimeUnit
 
 /**
  * MainActivity: 现代简洁风格的短信转发助手主界面
@@ -1723,54 +1717,8 @@ fun TestRuleDialog(
     }
 }
 
-data class UpdateInfo(
-    val versionName: String,
-    val changelog: String,
-    val apkUrl: String,
-    val fileSize: Long,
-    val releaseDate: String
-)
-
-suspend fun checkForUpdate(context: Context): UpdateInfo? = withContext(Dispatchers.IO) {
-    try {
-        val client = OkHttpClient.Builder()
-            .connectTimeout(10, TimeUnit.SECONDS)
-            .readTimeout(10, TimeUnit.SECONDS)
-            .writeTimeout(10, TimeUnit.SECONDS)
-            .build()
-
-        val request = Request.Builder()
-            .url("${Constants.UPDATE_SERVER_URL}?action=latest")
-            .build()
-
-        val response = client.newCall(request).execute()
-        if (!response.isSuccessful) return@withContext null
-
-        val json = response.body?.string() ?: return@withContext null
-        val obj = JSONObject(json)
-
-        if (!obj.getBoolean("success")) return@withContext null
-
-        val data = obj.getJSONObject("data")
-        return@withContext UpdateInfo(
-            versionName = data.getString("versionName"),
-            changelog = data.optString("changelog", ""),
-            apkUrl = data.getString("apkUrl"),
-            fileSize = data.getLong("fileSize"),
-            releaseDate = data.getString("releaseDate")
-        )
-    } catch (e: Exception) {
-        return@withContext null
-    }
-}
-
 @Composable
 fun AboutDialog(onDismiss: () -> Unit) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var isCheckingUpdate by remember { mutableStateOf(false) }
-    var showUpdateDialog by remember { mutableStateOf<UpdateInfo?>(null) }
-
     Dialog(onDismissRequest = onDismiss) {
         Card(
             modifier = Modifier
@@ -1808,7 +1756,7 @@ fun AboutDialog(onDismiss: () -> Unit) {
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "版本 2.7.1",
+                    "版本 2.7.2",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1830,194 +1778,15 @@ fun AboutDialog(onDismiss: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.height(20.dp))
 
-                Row(
+                Button(
+                    onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = {
-                            isCheckingUpdate = true
-                            scope.launch {
-                                val updateInfo = checkForUpdate(context)
-                                isCheckingUpdate = false
-                                if (updateInfo != null) {
-                                    val currentVersion = "2.7.1"
-                                    if (versionCompare(updateInfo.versionName, currentVersion) > 0) {
-                                        showUpdateDialog = updateInfo
-                                    } else {
-                                        Toast.makeText(context, "当前暂未检测到新版本", Toast.LENGTH_SHORT).show()
-                                    }
-                                } else {
-                                    Toast.makeText(context, "当前暂未检测到新版本", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                        },
-                        modifier = Modifier.weight(1f),
-                        enabled = !isCheckingUpdate,
-                        shape = RoundedCornerShape(12.dp),
-                        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
-                    ) {
-                        if (isCheckingUpdate) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("检查中...")
-                        } else {
-                            Text("检查更新")
-                        }
-                    }
-                    Button(
-                        onClick = onDismiss,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
-                    ) {
-                        Text("关闭")
-                    }
-                }
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(vertical = 14.dp)
+                ) { Text("关闭", fontSize = 16.sp) }
             }
         }
     }
-
-    if (showUpdateDialog != null) {
-        UpdateAvailableDialog(
-            updateInfo = showUpdateDialog!!,
-            onDismiss = { showUpdateDialog = null },
-            onDownload = {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(showUpdateDialog!!.apkUrl))
-                context.startActivity(intent)
-                showUpdateDialog = null
-            }
-        )
-    }
-}
-
-@Composable
-fun UpdateAvailableDialog(
-    updateInfo: UpdateInfo,
-    onDismiss: () -> Unit,
-    onDownload: () -> Unit
-) {
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            shape = RoundedCornerShape(24.dp),
-            elevation = CardDefaults.cardElevation(8.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(28.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(Color(0xFF10B981).copy(alpha = 0.1f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Filled.Update,
-                            contentDescription = null,
-                            tint = Color(0xFF10B981),
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Text(
-                            "发现新版本",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            "v${updateInfo.versionName}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                if (updateInfo.changelog.isNotEmpty()) {
-                    Text(
-                        "更新内容",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        updateInfo.changelog,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Outlined.DateRange,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        "发布时间: ${updateInfo.releaseDate}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Button(
-                        onClick = onDownload,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
-                    ) {
-                        Icon(Icons.Outlined.Download, contentDescription = null)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("立即下载")
-                    }
-                    OutlinedButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
-                    ) {
-                        Text("稍后再说")
-                    }
-                }
-            }
-        }
-    }
-}
-
-fun versionCompare(v1: String, v2: String): Int {
-    val parts1 = v1.split(".").map { it.toIntOrNull() ?: 0 }
-    val parts2 = v2.split(".").map { it.toIntOrNull() ?: 0 }
-    val maxLength = maxOf(parts1.size, parts2.size)
-    for (i in 0 until maxLength) {
-        val p1 = parts1.getOrElse(i) { 0 }
-        val p2 = parts2.getOrElse(i) { 0 }
-        if (p1 > p2) return 1
-        if (p1 < p2) return -1
-    }
-    return 0
 }
 
 @Composable

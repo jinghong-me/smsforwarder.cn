@@ -45,7 +45,4 @@ object Constants {
     const val CALL_TIMEOUT_SECONDS = 20L
     const val CONNECT_TIMEOUT_SECONDS = 10L
     const val READ_TIMEOUT_SECONDS = 20L
-    
-    // Update
-    const val UPDATE_SERVER_URL = "https://rdhzpw.jinghong.me/update-server/api.php"
 }
