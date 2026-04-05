@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-2.6.0-blue.svg)
+![Version](https://img.shields.io/badge/version-2.6.1-blue.svg)
 ![Android](https://img.shields.io/badge/Android-5.0%2B-brightgreen.svg)
 ![License](https://img.shields.io/badge/license-MIT-orange.svg)
 [![GitHub Stars](https://img.shields.io/github/stars/jinghong-me/sms-forwarder?style=social)](https://github.com/jinghong-me/sms-forwarder/stargazers)
@@ -181,6 +181,7 @@ A: 检查：
 
 | 版本 | 发布日期 | 说明 |
 |------|----------|------|
+| **v2.6.1** | 2026-04-04 | 更新关于对话框，添加版权信息和软件说明；调整菜单布局，避免功能重复 |
 | **v2.6.0** | 2026-04-04 | 降低最低支持版本到 Android 5.0 (API 21)，支持更多设备 |
 | **v2.5.2** | 2026-04-04 | 调整页面内容分配，首页包含服务开关和开机启动，设置页包含SIM卡和消息格式 |
 | v2.5.1 | 2026-04-04 | 修复自定义 SIM 号码显示逻辑问题，避免重复出现 SIM 卡 |

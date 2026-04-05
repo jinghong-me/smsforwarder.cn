@@ -275,9 +275,6 @@ fun SmsForwarderApp(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showTestDialog = true }) {
-                        Icon(Icons.Outlined.Science, contentDescription = "测试规则")
-                    }
                     IconButton(onClick = { showAboutDialog = true }) {
                         Icon(Icons.Outlined.Info, contentDescription = "关于")
                     }
@@ -472,8 +469,7 @@ fun SmsForwarderApp(
                             prefs.edit().putBoolean(Constants.PREF_HIGHLIGHT_VERIFICATION_CODE, highlightVerificationCode).apply()
                             if (highlightVerificationCode) LogStore.append(context, "已开启突出显示验证码") else LogStore.append(context, "已关闭突出显示验证码")
                         },
-                        onShowTestDialog = { showTestDialog = true },
-                        onShowAboutDialog = { showAboutDialog = true }
+                        onShowTestDialog = { showTestDialog = true }
                     )
                     4 -> LogTab(
                         logs = logs,
@@ -1760,16 +1756,25 @@ fun AboutDialog(onDismiss: () -> Unit) {
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "版本 2.0",
+                    "版本 2.6.1",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(20.dp))
                 Text(
-                    "自动将收到的短信根据关键词规则转发到企业微信、钉钉、飞书或自定义 Webhook。",
+                    "轻量、稳定、开源的 Android 短信转发应用。支持企业微信、钉钉、飞书和自定义 Webhook 等多种转发渠道，支持关键词过滤、验证码提取、本机号码识别等功能。",
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider()
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "© 2026 惊鸿科技（济宁）有限公司",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(28.dp))
                 Button(
@@ -2598,8 +2603,7 @@ fun SettingsTab(
     onShowSenderPhoneChange: (Boolean) -> Unit,
     highlightVerificationCode: Boolean,
     onHighlightVerificationCodeChange: (Boolean) -> Unit,
-    onShowTestDialog: () -> Unit,
-    onShowAboutDialog: () -> Unit
+    onShowTestDialog: () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
@@ -2744,22 +2748,6 @@ fun SettingsTab(
                         Icon(Icons.Outlined.Science, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("测试规则", fontSize = 16.sp)
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Button(
-                        onClick = onShowAboutDialog,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        contentPadding = PaddingValues(vertical = 14.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer
-                        )
-                    ) {
-                        Icon(Icons.Outlined.Info, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("关于", fontSize = 16.sp)
                     }
                 }
             }
