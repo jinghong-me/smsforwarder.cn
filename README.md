@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-2.6.1-blue.svg)
+![Version](https://img.shields.io/badge/version-2.6.4-blue.svg)
 ![Android](https://img.shields.io/badge/Android-5.0%2B-brightgreen.svg)
 ![License](https://img.shields.io/badge/license-MIT-orange.svg)
 [![GitHub Stars](https://img.shields.io/github/stars/jinghong-me/sms-forwarder?style=social)](https://github.com/jinghong-me/sms-forwarder/stargazers)
@@ -48,6 +48,9 @@
 ### 最新版本
 | 版本 | 说明 | 下载链接 |
 |------|------|----------|
+| **v2.6.4** | 修复双卡设备 SIM 卡识别 bug，SIM2 收到的短信现在会正确显示 SIM2 的本机号码；优化 subscriptionId 获取方式，提高兼容性 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
+| **v2.6.1** | 更新关于对话框，添加版权信息和软件说明；调整菜单布局，避免功能重复 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
+| **v2.6.0** | 降低最低支持版本到 Android 5.0 (API 21)，支持更多设备 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
 | **v2.5.2** | 调整页面内容分配，首页包含服务开关和开机启动，设置页包含SIM卡和消息格式 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
 | v2.5.1 | 修复自定义 SIM 号码显示逻辑问题，避免重复出现 SIM 卡 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
 | v2.5.0 | 新增底部导航栏，将功能分为首页、关键词、通道、设置、日志5个标签页 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
@@ -181,21 +184,16 @@ A: 检查：
 
 | 版本 | 发布日期 | 说明 |
 |------|----------|------|
+| **v2.6.4** | 2026-04-05 | 修复双卡设备 SIM 卡识别 bug，SIM2 收到的短信现在会正确显示 SIM2 的本机号码；优化 subscriptionId 获取方式，提高兼容性 |
 | **v2.6.1** | 2026-04-04 | 更新关于对话框，添加版权信息和软件说明；调整菜单布局，避免功能重复 |
 | **v2.6.0** | 2026-04-04 | 降低最低支持版本到 Android 5.0 (API 21)，支持更多设备 |
-| **v2.5.2** | 2026-04-04 | 调整页面内容分配，首页包含服务开关和开机启动，设置页包含SIM卡和消息格式 |
-| v2.5.1 | 2026-04-04 | 修复自定义 SIM 号码显示逻辑问题，避免重复出现 SIM 卡 |
-| v2.5.0 | 2026-04-04 | 新增底部导航栏，将功能分为首页、关键词、通道、设置、日志5个标签页 |
-| v2.4.1 | 2026-04-04 | 优化自定义 SIM 号码功能，添加更清晰的使用提示 |
-| v2.4.0 | 2026-04-04 | 新增自定义 SIM 号码功能，无法自动获取时支持手动输入 |
-| v2.3.0 | 2026-04-04 | 新增消息格式配置选项、SIM 卡信息预览 |
-| v2.2.0 | 2026-04-04 | 新增本机号码识别，双卡设备支持显示接收短信号码 |
-| v2.1.3 | 2026-04-04 | 修复验证码识别错误，优化提取逻辑 |
-| v2.1.2 | 2026-04-04 | 调整验证码显示顺序，优化消息格式 |
-| v2.1.0 | 2026-04-04 | 新增验证码自动提取与突出显示功能 |
-| v2.0.2 | - | 统一所有渠道消息前缀格式 |
-| v2.0.1 | - | 多关键词、多通道支持 |
-| v1.1 | - | 初始版本 |
+| **v2.5.x** | 2026-04-04 | 新增底部导航栏、自定义 SIM 号码、消息格式配置等功能 |
+| **v2.4.x** | 2026-04-04 | 新增自定义 SIM 号码功能、SIM 卡信息预览 |
+| **v2.3.x** | 2026-04-04 | 新增消息格式配置、本机号码识别 |
+| **v2.2.x** | 2026-04-04 | 验证码自动提取与突出显示 |
+| **v2.1.x** | - | 统一消息前缀格式 |
+| **v2.0.x** | - | 多关键词、多通道支持 |
+| **v1.x** | - | 初始版本 |
 
 ---
 
