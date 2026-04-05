@@ -1,3 +1,14 @@
+/*
+ * 短信转发助手
+ * 版本：V2.7.2
+ *
+ * 著作权人：华昊科技有限公司
+ * 开发者：王士辉
+ *
+ * Copyright (c) 2026 华昊科技有限公司. All rights reserved.
+ * 联系邮箱：huahao@email.cn
+ */
+
 package com.lanbing.smsforwarder
 
 import android.content.BroadcastReceiver
