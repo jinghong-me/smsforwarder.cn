@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2025 lanbing1989
+Copyright (c) 2026 华昊科技有限公司
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +25,7 @@ SOFTWARE.
 
 MIT 许可证
 
-版权所有 (c) 2025 lanbing1989
+版权所有 (c) 2026 华昊科技有限公司
 
 特此免费授予任何获得本软件及相关文档文件（“软件”）副本的人无限制权利，包括但不限于使用、复制、修改、合并、发布、分发、再授权和/或出售软件副本，以及向其提供本软件的人授予上述权利，符合以下条件：
 

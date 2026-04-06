@@ -6,9 +6,7 @@
     <meta name="description" content="短信转发助手隐私政策">
     <title>隐私政策 - 短信转发助手</title>
     
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- 使用系统默认字体，无需外部 CDN -->
     
     <style>
         * {
@@ -296,90 +294,89 @@
             </div>
 
             <div class="policy-section">
-                <h2>信息收集与处理</h2>
-                
-                <h3>短信内容及相关信息（敏感个人信息）</h3>
-                <p><strong>类型：</strong>收到的短信文本内容、发送者号码（原始号码）、短信时间戳等。</p>
-                <p><strong>用途：</strong>用于在设备上匹配用户配置的关键词规则并执行转发（例如发送到用户配置的 webhook 或通过设备发送到目标手机号）；同时记录本地转发日志以供用户查看和排查。</p>
+                <h2>核心原则</h2>
                 <div class="highlight-box">
-                    <p><strong>上传说明：</strong>应用不会将短信内容或相关敏感信息自动上传到开发者服务器或任何第三方服务器。唯一会把短信内容发送到网络的情形是：用户自行在应用中配置了一个 webhook（HTTP/HTTPS URL）作为转发目标；应用会将短信内容直接 POST 到该用户指定的第三方 URL（请在配置时谨慎选择接收方并确认其隐私做法）。开发者不对这些第三方接收方的数据处理负责。</p>
+                    <p><strong>我们的承诺：</strong></p>
+                    <ul>
+                        <li>✅ <strong>不上云</strong>：所有数据都在您的手机本地处理，不会上传到我们的服务器</li>
+                        <li>✅ <strong>不收集</strong>：不会收集您的个人信息、短信内容等敏感数据</li>
+                        <li>✅ <strong>不追踪</strong>：不集成任何统计、分析或广告 SDK</li>
+                        <li>✅ <strong>完全可控</strong>：所有权限和数据都由您自己掌控</li>
+                    </ul>
                 </div>
-                <p>我们仅在您<strong>明确授权</strong>的情况下访问短信内容，用于转发功能。我们不会存储您的短信内容，仅在转发过程中临时处理。</p>
-
-                <h3>发送短信相关信息（仅在用户选择 SMS 通道时）</h3>
-                <p><strong>类型：</strong>用户为"SMS"类型通道配置的目标手机号、（可选）用于发送的 SIM subscriptionId（subId）。</p>
-                <p><strong>用途：</strong>当用户在通道管理中添加 SMS 类型通道且启用该通道时，应用会通过设备的 SmsManager 使用设备的短信功能将原始短信内容转发到用户指定的目标手机号。</p>
-                <p><strong>上传说明：</strong>发送操作仅在用户设备本地通过系统短信服务完成；应用不会将发送的短信内容发送至开发者服务器。</p>
-
-                <h3>设备与运行信息（非敏感 / 技术性）</h3>
-                <p><strong>类型：</strong>应用版本、Android 版本、设备型号、运行时日志（应用内部日志文件）、崩溃或错误信息（默认不自动上报）。</p>
-                <p><strong>用途：</strong>用于本地诊断、日志记录和用户在应用内查看转发历史/调试信息。</p>
-                <p><strong>上传说明：</strong>本应用不集成任何自动上报的第三方崩溃分析或统计 SDK；也不会默认将日志/崩溃信息上传到开发者服务器。</p>
             </div>
 
             <div class="policy-section">
-                <h2>应用请求的权限与用途</h2>
+                <h2>信息收集与使用</h2>
                 
-                <h3>RECEIVE_SMS / READ_SMS（接收/读取短信）</h3>
-                <p>用途：监听并读取设备收到的短信内容，用于在设备端按用户配置进行转发与规则匹配。若用户拒绝该权限，应用无法读取到短信，核心转发功能将无法使用。</p>
+                <h3>短信内容</h3>
+                <p><strong>用途：</strong>仅在您的手机本地用于匹配关键词规则和执行转发</p>
+                <p><strong>存储：</strong>不会保存到任何服务器，仅在转发时临时处理</p>
+                <div class="highlight-box">
+                    <p><strong>重要：</strong>唯一会发送短信内容的情况是<strong>您主动配置了 Webhook 转发目标</strong>（如企业微信、钉钉、飞书或自定义 Webhook），应用会将短信直接发送到<strong>您指定的目标</strong>，不会经过我们的服务器。</p>
+                </div>
 
-                <h3>SEND_SMS（发送短信）</h3>
-                <p>用途：当且仅当用户在"转发通道"中添加并启用类型为 SMS 的通道时，应用会使用系统短信功能将短信内容转发到用户配置的目标手机号。若用户不添加 SMS 通道或未授予该权限，应用不会发送短信。</p>
+                <h3>配置信息</h3>
+                <p>您设置的转发通道、关键词规则等配置信息保存在您手机的本地存储中，不会上传。</p>
 
-                <h3>READ_PHONE_STATE（用于读取 SIM / subscription 信息）</h3>
-                <p>用途：在用户选择 SMS 通道并需要指定发送 SIM 卡（多卡设备）时，用于读取卡信息并允许用户选择要用于发送的 subscriptionId（subId）。此权限为按需请求，仅在需显示/选择卡信息时请求；若未授权，应用仍可使用默认短信管理器发送（但无法列出/选择具体 SIM 卡）。</p>
-
-                <h3>RECEIVE_BOOT_COMPLETED（开机自启）</h3>
-                <p>用途：当用户在设置中启用"开机自启动"后，应用会在设备开机完成后启动前台服务以保持转发服务持续运行；若用户不启用或撤销此权限，应用不会自动在开机时启动。</p>
-
-                <h3>POST_NOTIFICATIONS（通知权限）</h3>
-                <p>用途：用于显示应用的前台服务常驻通知（前台服务要求），提示服务状态与快速操作（例如停止服务）。应用在启动服务前会检查并提示用户开启通知权限。</p>
-
-                <h3>INTERNET（网络访问）</h3>
-                <p>用途：用于将短信转发到用户配置的网络通道（Webhook 等）。仅在用户主动配置 Webhook 时用于网络请求；默认不上传任何数据至开发者服务器。</p>
+                <h3>转发日志</h3>
+                <p>应用会在本地记录转发历史（最多200条），方便您查看和调试，这些日志仅存储在您的手机上。</p>
             </div>
 
             <div class="policy-section">
-                <h2>数据存储与备份</h2>
+                <h2>权限说明</h2>
                 
+                <ul>
+                    <li><strong>接收短信权限</strong>：监听设备收到的短信，用于执行转发功能</li>
+                    <li><strong>读取手机状态权限</strong>：用于识别双卡手机的 SIM 卡信息和获取本机号码（可选）</li>
+                    <li><strong>通知权限</strong>：显示前台服务通知，让您知道服务正在运行</li>
+                    <li><strong>网络权限</strong>：仅用于转发到您配置的 Webhook</li>
+                    <li><strong>开机自启权限</strong>：让应用在开机后自动启动转发服务（可选）</li>
+                    <li><strong>前台服务权限</strong>：保持应用在后台稳定运行</li>
+                    <li><strong>忽略电池优化权限</strong>：防止系统杀死后台服务（可选）</li>
+                    <li><strong>访问网络状态权限</strong>：检测网络连接状态</li>
+                </ul>
+                <p>所有权限都需要您<strong>主动授权</strong>，您可以随时在系统设置中撤销。</p>
+            </div>
+
+            <div class="policy-section">
+                <h2>数据存储</h2>
+                
+                <h3>本地存储</h3>
+                <p>所有数据都存储在您手机的私有目录中，包括：</p>
+                <ul>
+                    <li>转发通道和关键词配置</li>
+                    <li>转发历史日志</li>
+                    <li>应用设置</li>
+                </ul>
+
                 <h3>服务器存储</h3>
                 <div class="highlight-box">
-                    <p>本应用当前<strong>不会将短信、联系人或转发记录上传到开发者服务器或第三方服务器</strong>（开发者也未集成任何收集类 SDK）。</p>
+                    <p><strong>我们没有服务器存储您的数据！</strong></p>
+                    <p>应用是纯本地运行的工具，我们不收集、不存储、不上传任何用户数据。</p>
                 </div>
-
-                <h3>本地存储</h3>
-                <p>您的个人信息和短信内容应用在设备内部存储（context.filesDir）保存。转发日志文件（文件名：sms_forwarder_logs.txt），用于在应用内展示最近的运行/转发信息；该文件保留最近若干条（源码中限制为最多 200 条）；应用配置与通道/关键词规则保存在 SharedPreferences（名称 "app_config"）中。</p>
-
-                <h3>设备备份</h3>
-                <p>应用在 Manifest 中允许备份（android:allowBackup="true"），这意味着在设备或用户启用的系统备份机制下，应用数据可能被包含在系统备份中；如需避免被备份，请在设备/账户备份设置中管理。</p>
             </div>
 
             <div class="policy-section">
-                <h2>用户权利与可控性</h2>
+                <h2>您的权利</h2>
                 
-                <h3>权限控制</h3>
-                <p>用户可通过 Android 系统权限管理随时撤销或授予权限（例如 RECEIVE_SMS、SEND_SMS、READ_PHONE_STATE、POST_NOTIFICATIONS 等）。撤销权限会影响对应功能。</p>
-
-                <h3>数据查看与删除</h3>
-                <p>本地日志可以在应用内查看、刷新或清除（应用 UI 提供清除日志功能）。应用数据（配置、通道、关键词）保存在本地 SharedPreferences，用户可以在应用内删除或通过卸载应用清除。</p>
-                <p>如果确有场景导致开发者持有用户数据（当前版本通常不会），用户可通过联系邮箱 huahao@email.cn 提出数据访问或删除请求。开发者在验证请求人身份后将在合理期限内处理（通常不超过 30 天）。</p>
-
-                <h3>导出</h3>
-                <p>若需要导出本地数据（例如日志或配置），用户可在设备上手动导出或开发者将根据具体功能在应用内提供导出入口（当前版本未提供自动上传/导出到开发者服务器的行为）。</p>
+                <ul>
+                    <li><strong>查看数据</strong>：可以在应用内查看所有转发日志</li>
+                    <li><strong>删除数据</strong>：可以在应用内清空日志，或卸载应用删除所有数据</li>
+                    <li><strong>控制权限</strong>：可以在系统设置中随时授予或撤销权限</li>
+                </ul>
             </div>
 
             <div class="policy-section">
-                <h2>数据共享与第三方</h2>
+                <h2>第三方服务</h2>
                 
                 <div class="warning-box">
-                    <p><strong>重要声明：</strong>我们<strong>不会采集、共享、出售</strong>您的个人信息给第三方。</p>
+                    <p><strong>关于转发目标：</strong></p>
+                    <p>如果您配置了 Webhook 或其他第三方服务作为转发目标，短信内容会发送到该第三方。请您谨慎选择转发目标，并确保了解其隐私政策。我们不对第三方的数据处理负责。</p>
                 </div>
 
-                <h3>用户指定的转发目标（Webhook、第三方服务或目标手机号）</h3>
-                <p>当用户将转发目标设置为第三方 URL 或服务时，应用会把短信内容直接发送到该第三方目标（通过 HTTP POST 或发送 SMS），这些数据会由该第三方接收并由其处理。开发者不会默认收集或转发这些数据到自己的服务器，且不对第三方的隐私实践负责。用户应谨慎选择转发目标并确认其隐私与安全政策。</p>
-
                 <h3>第三方 SDK</h3>
-                <p>当前版本未集成任何第三方数据收集类 SDK（例如统计、崩溃、广告等）。如未来集成会在隐私政策中说明并征得必要同意。</p>
+                <p>当前版本未集成任何第三方 SDK（包括统计、广告、崩溃分析等）。</p>
             </div>
 
             <div class="policy-section">
@@ -390,8 +387,7 @@
             <div class="policy-section">
                 <h2>联系我们</h2>
                 <p>如果您对本隐私政策有任何疑问或建议，请通过以下方式联系我们：</p>
-                <p><strong>邮箱：</strong>huahao@email.cn</p>
-                <p><strong>客服热线：</strong>18005378833</p>
+                <p><strong>邮箱：</strong>support@smsforwarder.cn</p>
             </div>
         </div>
     </div>

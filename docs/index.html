@@ -7,9 +7,7 @@
     <meta name="keywords" content="短信转发,短信提醒,微信提醒,钉钉提醒,手机验证码,双卡手机">
     <title>短信转发助手 - 再也不错过重要短信</title>
     
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- 使用系统默认字体，无需外部 CDN -->
     
     <style>
         * {
@@ -710,13 +708,13 @@
             <div class="steps">
                 <div class="step fade-in">
                     <div class="step-number">1</div>
-                    <h3>下载安装APP</h3>
-                    <p>下载APP并安装到你的备用机或工作手机上，打开后授予短信权限。</p>
+                    <h3>添加转发通道</h3>
+                    <p>选择你要用的转发方式（比如企业微信），按照提示填好配置信息。</p>
                 </div>
                 <div class="step fade-in">
                     <div class="step-number">2</div>
-                    <h3>添加转发通道</h3>
-                    <p>选择你要用的转发方式（比如企业微信），按照提示填好配置信息。</p>
+                    <h3>添加关键词或全部</h3>
+                    <p>设置关键词（比如"验证码"、"快递"），或者选择转发所有短信。</p>
                 </div>
                 <div class="step fade-in">
                     <div class="step-number">3</div>
@@ -728,7 +726,7 @@
                 <div style="display: inline-block; background: rgba(102, 126, 234, 0.08); border: 1px dashed rgba(102, 126, 234, 0.3); border-radius: 16px; padding: 28px 40px; max-width: 560px;">
                     <p style="color: var(--text-gray); font-size: 15px; line-height: 1.8;">
                         <strong>💡 小提示：</strong><br>
-                        如果你的手机是小米、华为、OPPO、vivo这些品牌，建议在手机管家里给APP加个"后台保护"或"自启动"权限，这样APP就能一直稳定运行啦！
+                        如果你的手机是小米、华为、OPPO、vivo这些品牌，建议在手机权限管理里给APP开启：<strong>通知权限、短信权限、通知类短信权限、自启动、电量策略无限制</strong>，这样APP就能一直稳定运行啦！
                     </p>
                 </div>
             </div>
@@ -755,12 +753,13 @@
                             <div class="label">手机要求</div>
                         </div>
                     </div>
-                    <a href="https://github.com/jinghong-me/sms-forwarder/releases" target="_blank" class="btn btn-primary" style="width: 100%; justify-content: center;">
+                    <a href="/download/" class="btn btn-primary" style="width: 100%; justify-content: center;">
                         <span>📥</span>
                         <span>下载 Android APK</span>
                     </a>
                     <p style="margin-top: 16px; font-size: 13px; color: var(--text-gray);">
-                        也可以去 <a href="https://github.com/jinghong-me/sms-forwarder" target="_blank" style="color: var(--primary); text-decoration: none;">GitHub</a> 看看源代码
+                        <a href="/download/" target="_blank" style="color: var(--primary); text-decoration: none;">国内高速下载通道</a> | 
+                        <a href="https://github.com/jinghong-me/sms-forwarder/releases" target="_blank" style="color: var(--primary); text-decoration: none;">GitHub Releases</a>
                     </p>
                 </div>
             </div>

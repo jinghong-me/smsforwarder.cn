@@ -138,6 +138,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        // 从设置页面回来时，刷新权限状态
+        onPermissionChanged?.invoke()
+    }
+
     private fun onStopService() {
         val svc = Intent(this, SmsForegroundService::class.java)
         stopService(svc)
@@ -222,6 +228,7 @@ fun SmsForwarderApp(
     var currentTab by remember { mutableStateOf<Int>(0) }
     var showTestDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
+    var showBootTipDialog by remember { mutableStateOf(false) }
     
     // 定义5个标签页
     val tabs = listOf(
@@ -387,7 +394,12 @@ fun SmsForwarderApp(
                         onStartOnBootChange = {
                             startOnBoot = it
                             prefs.edit().putBoolean(Constants.PREF_START_ON_BOOT, startOnBoot).apply()
-                            if (startOnBoot) LogStore.append(context, "已开启开机启动") else LogStore.append(context, "已关闭开机启动")
+                            if (startOnBoot) {
+                                LogStore.append(context, "已开启开机启动")
+                                showBootTipDialog = true
+                            } else {
+                                LogStore.append(context, "已关闭开机启动")
+                            }
                         },
                         smsGranted = smsGranted,
                         notifGranted = notifGranted,
@@ -501,7 +513,8 @@ fun SmsForwarderApp(
                             prefs.edit().putBoolean(Constants.PREF_HIGHLIGHT_VERIFICATION_CODE, highlightVerificationCode).apply()
                             if (highlightVerificationCode) LogStore.append(context, "已开启突出显示验证码") else LogStore.append(context, "已关闭突出显示验证码")
                         },
-                        onShowTestDialog = { showTestDialog = true }
+                        onShowTestDialog = { showTestDialog = true },
+                        permissionUpdateTrigger = permissionUpdateTrigger
                     )
                     4 -> LogTab(
                         logs = logs,
@@ -670,6 +683,43 @@ fun SmsForwarderApp(
     // About Dialog
     if (showAboutDialog) {
         AboutDialog(onDismiss = { showAboutDialog = false })
+    }
+    
+    // 开机自启动提示对话框
+    if (showBootTipDialog) {
+        val ctx = LocalContext.current
+        ModernAlertDialog(
+            onDismissRequest = { showBootTipDialog = false },
+            title = "重要提示",
+            content = {
+                Text(
+                    text = "要让开机自启动正常工作，您还需要在系统设置中开启应用的自启动权限。\n\n通常在：设置 → 应用管理 → 短信转发助手 → 权限管理/自启动管理",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showBootTipDialog = false }) {
+                    Text("我知道了")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showBootTipDialog = false
+                    try {
+                        val intent = Intent().apply {
+                            action = "android.settings.APPLICATION_DETAILS_SETTINGS"
+                            data = Uri.fromParts("package", ctx.packageName, null)
+                        }
+                        ctx.startActivity(intent)
+                    } catch (_: Exception) {
+                        Toast.makeText(ctx, "请手动打开系统设置", Toast.LENGTH_SHORT).show()
+                    }
+                }) {
+                    Text("去设置")
+                }
+            }
+        )
     }
 }
 
@@ -1849,14 +1899,20 @@ fun AboutDialog(onDismiss: () -> Unit) {
 }
 
 @Composable
-fun SimCardInfoCard() {
+fun SimCardInfoCard(permissionUpdateTrigger: Int) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE) }
     
     var customSim1Phone by remember { mutableStateOf(prefs.getString(Constants.PREF_CUSTOM_SIM1_PHONE, null)) }
     var customSim2Phone by remember { mutableStateOf(prefs.getString(Constants.PREF_CUSTOM_SIM2_PHONE, null)) }
     
-    val simCards = remember(customSim1Phone, customSim2Phone) { 
+    val hasPhonePermission by remember(permissionUpdateTrigger) {
+        derivedStateOf {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+    
+    val simCards = remember(customSim1Phone, customSim2Phone, permissionUpdateTrigger) { 
         getSimCardInfo(context, customSim1Phone, customSim2Phone) 
     }
     
@@ -1895,6 +1951,60 @@ fun SimCardInfoCard() {
             }
 
             Spacer(modifier = Modifier.height(16.dp))
+            
+            // 电话权限提示
+            if (!hasPhonePermission) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            try {
+                                val intent = Intent().apply {
+                                    action = "android.settings.APPLICATION_DETAILS_SETTINGS"
+                                    data = Uri.fromParts("package", context.packageName, null)
+                                }
+                                context.startActivity(intent)
+                            } catch (_: Exception) {
+                                Toast.makeText(context, "请手动打开系统设置", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                    color = Color(0xFFFEF2F2).copy(alpha = 0.9f),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Filled.Warning,
+                            contentDescription = null,
+                            tint = Color(0xFFDC2626)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "需要电话权限才能自动获取本机号码",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium,
+                                color = Color(0xFF991B1B)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                "点击前往设置开启权限，或手动输入号码",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFFB91C1C)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(
+                            Icons.Filled.ChevronRight,
+                            contentDescription = null,
+                            tint = Color(0xFFDC2626)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
             
             // 提示信息
             Surface(
@@ -2664,7 +2774,8 @@ fun SettingsTab(
     onShowSenderPhoneChange: (Boolean) -> Unit,
     highlightVerificationCode: Boolean,
     onHighlightVerificationCodeChange: (Boolean) -> Unit,
-    onShowTestDialog: () -> Unit
+    onShowTestDialog: () -> Unit,
+    permissionUpdateTrigger: Int
 ) {
     LazyColumn(
         modifier = Modifier
@@ -2675,7 +2786,7 @@ fun SettingsTab(
     ) {
         // SIM 卡信息卡片
         item {
-            SimCardInfoCard()
+            SimCardInfoCard(permissionUpdateTrigger)
         }
 
         // 消息格式配置
