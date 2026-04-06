@@ -413,7 +413,8 @@ fun SmsForwarderApp(
                                 }
                                 context.startActivity(intent)
                             }
-                        }
+                        },
+                        permissionUpdateTrigger = permissionUpdateTrigger
                     )
                     1 -> KeywordTab(
                         channels = channels,
@@ -1026,7 +1027,7 @@ fun ConfigTab(
 
         // SIM 卡信息卡片
         item {
-            SimCardInfoCard()
+            SimCardInfoCard(permissionUpdateTrigger)
         }
 
         // Keyword Config Card
@@ -2370,7 +2371,8 @@ fun HomeTab(
     isIgnoringBatteryOptimizations: Boolean,
     onRequestSmsPermission: () -> Unit,
     onRequestNotificationPermission: () -> Unit,
-    onRequestBatteryOptimization: () -> Unit
+    onRequestBatteryOptimization: () -> Unit,
+    permissionUpdateTrigger: Int
 ) {
     LazyColumn(
         modifier = Modifier
