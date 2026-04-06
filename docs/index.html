@@ -1,371 +1,841 @@
-
-<!DOCTYPE html><html lang="zh-CN"><head>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>短信转发助手 - 不漏掉任何重要短信</title>
-    <link href="https://gw.alipayobjects.com/render/p/yuyan/180023180003946312/material-icons.css" rel="stylesheet">
-    <script>window.injectInfo = { env: "PROD" };</script><script>window.publicPath = "https://gw.alipayobjects.com/render/p/yuyan/180023180034880980/";</script><script src="https://gw.alipayobjects.com/render/p/yuyan/180023180027026141/mini-app-log.js"></script>
-    <script defer="" src="https://gw.alipayobjects.com/render/p/yuyan/180023180027026141/mini_app_base.js"></script>
-    <script defer="" src="https://gw.alipayobjects.com/render/p/yuyan/180023180000534978/tailwind4.1.13.js"></script>
+    <meta name="description" content="短信转发助手 - 把重要短信即时转发到你的微信、钉钉、手机，再也不会错过任何重要消息">
+    <meta name="keywords" content="短信转发,短信提醒,微信提醒,钉钉提醒,手机验证码,双卡手机">
+    <title>短信转发助手 - 再也不错过重要短信</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <style>
-        body {
+        * {
             margin: 0;
             padding: 0;
-            background: linear-gradient(135deg, #F0F7FF 0%, #E6F3FF 50%, #F0F7FF 100%);
-            min-height: 100vh;
+            box-sizing: border-box;
         }
-        .container {
-            margin-left: 0;
-            margin-right: 0;
-            max-width: 100%;
+
+        :root {
+            --primary: #667EEA;
+            --primary-dark: #4A5FC1;
+            --secondary: #764BA2;
+            --accent: #10B981;
+            --bg-light: #F8F9FF;
+            --bg-white: #FFFFFF;
+            --text-dark: #1F2937;
+            --text-gray: #6B7280;
+            --text-light: #9CA3AF;
+            --border: #E5E7EB;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
-        .feature-card {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(91, 159, 239, 0.2);
-            transition: all 0.3s ease;
+
+        html {
+            scroll-behavior: smooth;
         }
-        .feature-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(91, 159, 239, 0.3);
+
+        body {
+            font-family: 'Noto Sans SC', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-light);
+            color: var(--text-dark);
+            line-height: 1.8;
+            overflow-x: hidden;
         }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+        }
+
         .gradient-text {
-            background: linear-gradient(135deg, #5B9FEF 0%, #4A8FE8 100%);
+            background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-        .bubble-animation {
-            animation: float 3s ease-in-out infinite;
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 24px;
         }
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-        }
-        .slide-in {
-            animation: slideIn 0.5s ease-out;
-        }
-        @keyframes slideIn {
-            from { 
-                opacity: 0;
-                transform: translateX(-30px);
-            }
-            to { 
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-        .pulse-animation {
-            animation: pulse 2s ease-in-out infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-        .sms-bubble {
-            background: linear-gradient(135deg, #5B9FEF 0%, #4A8FE8 100%);
-            color: white;
-            padding: 12px 18px;
-            border-radius: 18px;
-            position: relative;
-            margin: 8px 0;
-            box-shadow: 0 2px 10px rgba(91, 159, 239, 0.3);
-        }
-        .sms-bubble::before {
-            content: '';
-            position: absolute;
-            left: -8px;
-            top: 15px;
-            width: 0;
-            height: 0;
-            border-top: 8px solid transparent;
-            border-bottom: 8px solid transparent;
-            border-right: 8px solid #5B9FEF;
-        }
-        .slider {
-            -webkit-appearance: none;
-            appearance: none;
-            height: 6px;
-            background: #E3F2FD;
-            outline: none;
-            border-radius: 3px;
-            transition: background 0.3s;
-        }
-        .slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 20px;
-            height: 20px;
-            background: #5B9FEF;
-            cursor: pointer;
-            border-radius: 50%;
-            box-shadow: 0 2px 6px rgba(91, 159, 239, 0.3);
-        }
-        .slider::-moz-range-thumb {
-            width: 20px;
-            height: 20px;
-            background: #5B9FEF;
-            cursor: pointer;
-            border-radius: 50%;
-            box-shadow: 0 2px 6px rgba(91, 159, 239, 0.3);
-        }
-        .download-button {
-            background: linear-gradient(135deg, #5B9FEF 0%, #4A8FE8 100%);
+
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
             transition: all 0.3s ease;
         }
-        .download-button:hover {
+
+        nav.scrolled {
+            background: rgba(255, 255, 255, 0.98);
+            box-shadow: var(--shadow);
+        }
+
+        .nav-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 0;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-dark);
+            text-decoration: none;
+        }
+
+        .logo-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 28px;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: var(--text-gray);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 15px;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+
+        .hero {
+            padding: 140px 0 100px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -30%;
+            right: -20%;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(102, 126, 234, 0.15) 0%, transparent 60%);
+            border-radius: 50%;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 18px;
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 50px;
+            color: #10B981;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 28px;
+        }
+
+        .hero h1 {
+            font-size: 52px;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 20px;
+        }
+
+        .hero h1 .gradient-text {
+            display: block;
+        }
+
+        .hero p {
+            font-size: 18px;
+            color: var(--text-gray);
+            max-width: 550px;
+            margin: 0 auto 36px;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 14px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+            color: white;
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.35);
+        }
+
+        .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(91, 159, 239, 0.4);
+            box-shadow: 0 12px 32px rgba(102, 126, 234, 0.45);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--text-dark);
+            border: 2px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .scenarios {
+            padding: 100px 0;
+            background: white;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .section-header h2 {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .section-header p {
+            font-size: 16px;
+            color: var(--text-gray);
+        }
+
+        .scenarios-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+        }
+
+        .scenario-card {
+            padding: 32px;
+            background: var(--bg-light);
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .scenario-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow);
+        }
+
+        .scenario-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            margin-bottom: 20px;
+        }
+
+        .scenario-card h3 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .scenario-card p {
+            color: var(--text-gray);
+            font-size: 15px;
+        }
+
+        .features {
+            padding: 100px 0;
+            background: linear-gradient(180deg, white 0%, var(--bg-light) 100%);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 24px;
+        }
+
+        .feature-card {
+            padding: 32px;
+            background: white;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow);
+        }
+
+        .feature-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 18px;
+        }
+
+        .feature-card h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .feature-card p {
+            color: var(--text-gray);
+            font-size: 14px;
+        }
+
+        .tutorial {
+            padding: 100px 0;
+            background: white;
+        }
+
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 32px;
+            margin-top: 60px;
+        }
+
+        .step {
+            position: relative;
+            text-align: center;
+        }
+
+        .step-number {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+            color: white;
+            font-size: 24px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+        }
+
+        .step h3 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .step p {
+            color: var(--text-gray);
+            font-size: 15px;
+        }
+
+        .download {
+            padding: 100px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .download-content {
+            text-align: center;
+        }
+
+        .download-card {
+            background: white;
+            padding: 56px 48px;
+            border-radius: 28px;
+            box-shadow: var(--shadow-lg);
+            max-width: 520px;
+            margin: 0 auto;
+        }
+
+        .download-card h2 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .download-card p {
+            color: var(--text-gray);
+            margin-bottom: 28px;
+        }
+
+        .version-info {
+            display: flex;
+            justify-content: center;
+            gap: 28px;
+            margin-bottom: 28px;
+            padding: 20px;
+            background: var(--bg-light);
+            border-radius: 14px;
+        }
+
+        .version-item {
+            text-align: center;
+        }
+
+        .version-item .value {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .version-item .label {
+            font-size: 13px;
+            color: var(--text-gray);
+            margin-top: 4px;
+        }
+
+        footer {
+            background: var(--text-dark);
+            color: white;
+            padding: 50px 0 24px;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 48px;
+            margin-bottom: 32px;
+        }
+
+        .footer-brand h3 {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 14px;
+        }
+
+        .footer-brand p {
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.8;
+            font-size: 14px;
+        }
+
+        .footer-links h4 {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 18px;
+        }
+
+        .footer-links a {
+            display: block;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            margin-bottom: 10px;
+            font-size: 14px;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: white;
+        }
+
+        .footer-bottom {
+            padding-top: 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .footer-bottom p {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 14px;
+        }
+
+        .footer-icp {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .footer-icp a {
+            color: rgba(255, 255, 255, 0.6);
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s ease;
+        }
+
+        .footer-icp a:hover {
+            color: white;
+        }
+
+        @media (max-width: 968px) {
+            .nav-links {
+                display: none;
+            }
+
+            .hero h1 {
+                font-size: 38px;
+            }
+
+            .hero p {
+                font-size: 16px;
+            }
+
+            .section-header h2 {
+                font-size: 28px;
+            }
+
+            .footer-content {
+                grid-template-columns: 1fr;
+                gap: 32px;
+            }
+
+            .footer-bottom {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .hero {
+                padding: 110px 0 70px;
+            }
+
+            .hero h1 {
+                font-size: 32px;
+            }
+
+            .hero-buttons {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .scenarios, .features, .tutorial, .download {
+                padding: 70px 0;
+            }
+
+            .download-card {
+                padding: 40px 24px;
+            }
+
+            .version-info {
+                flex-direction: column;
+                gap: 12px;
+            }
+        }
+
+        .fade-in {
+            opacity: 0;
+            transform: translateY(24px);
+            transition: all 0.6s ease;
+        }
+
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
         }
     </style>
-<script>
-    window.artifactId = "flashapp-f9284ab16bd043e5";
-    window.artifactVersion = "2";
-    window.trace_id = "218edba717653512025986823e6d91";
-</script>
-<meta http-equiv="Content-Security-Policy" content="
-  script-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: *.alipay.com *.alipayobjects.com  *.amap.com *.lingguang.com *.lingguangcontent.com;
-  frame-src 'self' data: blob: *.alipay.com *.alipayobjects.com *.amap.com *.lingguang.com *.lingguangcontent.com;
-  connect-src 'self' data: blob: *.alipay.com *.alipayobjects.com  *.amap.com *.lingguang.com *.lingguangcontent.com;
-  child-src 'self' data: blob: *.alipay.com *.alipayobjects.com  *.amap.com *.lingguang.com *.lingguangcontent.com;
-  object-src 'self' data: blob: *.alipay.com *.alipayobjects.com  *.amap.com *.lingguang.com *.lingguangcontent.com;
-  base-uri 'self' *.alipay.com *.alipayobjects.com *.amap.com *.lingguang.com *.lingguangcontent.com;
-  form-action 'none';
-  upgrade-insecure-requests;
-">
-
 </head>
 <body>
-    <div id="container" class="container">
-        <!-- 头部区域 -->
-        <header class="text-center py-8 px-4">
-            <div class="bubble-animation inline-block mb-4">
-                <span class="material-icons text-6xl text-blue-500">sms</span>
-            </div>
-            <h1 class="text-4xl font-bold gradient-text mb-3">短信转发助手</h1>
-            <p class="text-gray-600 text-lg">不漏掉任何重要短信</p>
-        </header>
-
-        <!-- 功能特性展示区 -->
-        <section class="px-4 py-8">
-            <h2 class="text-2xl font-bold text-center text-gray-800 mb-8">核心功能</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-                <!-- 功能卡片1 -->
-                <div class="feature-card rounded-2xl p-6 cursor-pointer" data-testid="feature-card-1" onclick="toggleFeatureDetail(this)">
-                    <div class="flex items-center mb-4">
-                        <span class="material-icons text-3xl text-blue-500 mr-3">filter_list</span>
-                        <h3 class="text-xl font-semibold text-gray-800">智能过滤</h3>
-                    </div>
-                    <p class="text-gray-600 mb-4">根据关键词、发件人等条件智能筛选重要短信</p>
-                    <div class="feature-detail hidden mt-4 pt-4 border-t border-gray-200">
-                        <ul class="text-sm text-gray-600 space-y-2">
-                            <li>• 支持自定义关键词过滤</li>
-                            <li>• 黑名单白名单管理</li>
-                            <li>• AI智能识别重要程度</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <!-- 功能卡片2 -->
-                <div class="feature-card rounded-2xl p-6 cursor-pointer" data-testid="feature-card-2" onclick="toggleFeatureDetail(this)">
-                    <div class="flex items-center mb-4">
-                        <span class="material-icons text-3xl text-blue-500 mr-3">forward</span>
-                        <h3 class="text-xl font-semibold text-gray-800">即时转发</h3>
-                    </div>
-                    <p class="text-gray-600 mb-4">重要短信实时转发到指定邮箱或微信</p>
-                    <div class="feature-detail hidden mt-4 pt-4 border-t border-gray-200">
-                        <ul class="text-sm text-gray-600 space-y-2">
-                            <li>• 支持邮件转发</li>
-                            <li>• 微信企业号推送</li>
-                            <li>• 多渠道同时转发</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <!-- 功能卡片3 -->
-                <div class="feature-card rounded-2xl p-6 cursor-pointer" data-testid="feature-card-3" onclick="toggleFeatureDetail(this)">
-                    <div class="flex items-center mb-4">
-                        <span class="material-icons text-3xl text-blue-500 mr-3">schedule</span>
-                        <h3 class="text-xl font-semibold text-gray-800">定时规则</h3>
-                    </div>
-                    <p class="text-gray-600 mb-4">设置时间段规则，不同时间不同转发策略</p>
-                    <div class="feature-detail hidden mt-4 pt-4 border-t border-gray-200">
-                        <ul class="text-sm text-gray-600 space-y-2">
-                            <li>• 工作时间/休息时间区分</li>
-                            <li>• 节假日特殊设置</li>
-                            <li>• 紧急短信全天候转发</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <!-- 功能卡片4 -->
-                <div class="feature-card rounded-2xl p-6 cursor-pointer" data-testid="feature-card-4" onclick="toggleFeatureDetail(this)">
-                    <div class="flex items-center mb-4">
-                        <span class="material-icons text-3xl text-blue-500 mr-3">security</span>
-                        <h3 class="text-xl font-semibold text-gray-800">隐私保护</h3>
-                    </div>
-                    <p class="text-gray-600 mb-4">本地处理，端到端加密，保护短信隐私</p>
-                    <div class="feature-detail hidden mt-4 pt-4 border-t border-gray-200">
-                        <ul class="text-sm text-gray-600 space-y-2">
-                            <li>• 本地数据处理</li>
-                            <li>• 传输加密保护</li>
-                            <li>• 自动清理敏感信息</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <!-- 功能卡片5 -->
-                <div class="feature-card rounded-2xl p-6 cursor-pointer" data-testid="feature-card-5" onclick="toggleFeatureDetail(this)">
-                    <div class="flex items-center mb-4">
-                        <span class="material-icons text-3xl text-blue-500 mr-3">analytics</span>
-                        <h3 class="text-xl font-semibold text-gray-800">统计分析</h3>
-                    </div>
-                    <p class="text-gray-600 mb-4">短信数据统计，转发记录一目了然</p>
-                    <div class="feature-detail hidden mt-4 pt-4 border-t border-gray-200">
-                        <ul class="text-sm text-gray-600 space-y-2">
-                            <li>• 转发数量统计</li>
-                            <li>• 重要短信分类</li>
-                            <li>• 月度报告生成</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <!-- 功能卡片6 -->
-                <div class="feature-card rounded-2xl p-6 cursor-pointer" data-testid="feature-card-6" onclick="toggleFeatureDetail(this)">
-                    <div class="flex items-center mb-4">
-                        <span class="material-icons text-3xl text-blue-500 mr-3">settings</span>
-                        <h3 class="text-xl font-semibold text-gray-800">个性化设置</h3>
-                    </div>
-                    <p class="text-gray-600 mb-4">灵活的配置选项，满足不同使用需求</p>
-                    <div class="feature-detail hidden mt-4 pt-4 border-t border-gray-200">
-                        <ul class="text-sm text-gray-600 space-y-2">
-                            <li>• 自定义转发模板</li>
-                            <li>• 多种通知方式</li>
-                            <li>• 快捷开关控制</li>
-                        </ul>
-                    </div>
+    <nav id="navbar">
+        <div class="container">
+            <div class="nav-content">
+                <a href="#" class="logo">
+                    <div class="logo-icon gradient-bg">💬</div>
+                    <span>短信转发助手</span>
+                </a>
+                <div class="nav-links">
+                    <a href="#scenarios">使用场景</a>
+                    <a href="#features">功能特点</a>
+                    <a href="#tutorial">使用方法</a>
+                    <a href="#download">下载</a>
                 </div>
             </div>
-        </section>
+        </div>
+    </nav>
 
-        <!-- 使用场景演示区 -->
-        <section class="px-4 py-8 bg-white bg-opacity-50">
-            <h2 class="text-2xl font-bold text-center text-gray-800 mb-8">使用场景</h2>
-            <div class="max-w-4xl mx-auto">
-                <div class="bg-white rounded-2xl p-6 shadow-lg">
-                    <div class="flex items-center justify-between mb-6">
-                        <div class="flex items-center">
-                            <span class="material-icons text-blue-500 mr-2">business</span>
-                            <span class="font-semibold text-gray-800">工作场景</span>
-                        </div>
-                        <button class="text-blue-500 text-sm" data-testid="scenario-work" onclick="showScenario('work')">查看演示</button>
-                    </div>
-                    
-                    <div class="flex items-center justify-between mb-6">
-                        <div class="flex items-center">
-                            <span class="material-icons text-green-500 mr-2">home</span>
-                            <span class="font-semibold text-gray-800">生活场景</span>
-                        </div>
-                        <button class="text-blue-500 text-sm" data-testid="scenario-life" onclick="showScenario('life')">查看演示</button>
-                    </div>
-                    
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center">
-                            <span class="material-icons text-red-500 mr-2">priority_high</span>
-                            <span class="font-semibold text-gray-800">紧急场景</span>
-                        </div>
-                        <button class="text-blue-500 text-sm" data-testid="scenario-urgent" onclick="showScenario('urgent')">查看演示</button>
-                    </div>
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-badge">
+                    <span>🎉</span>
+                    <span>免费好用，简单易上手</span>
                 </div>
-
-                <!-- 演示区域 -->
-                <div id="demo-area" class="mt-6 hidden">
-                    <div class="bg-white rounded-2xl p-6 shadow-lg">
-                        <div id="demo-content"></div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- 价值说明区 -->
-        <section class="px-4 py-8 bg-white bg-opacity-50">
-            <h2 class="text-2xl font-bold text-center text-gray-800 mb-8">为什么选择我们</h2>
-            <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="flex items-start">
-                    <span class="material-icons text-3xl text-blue-500 mr-4 mt-1">check_circle</span>
-                    <div>
-                        <h3 class="font-semibold text-gray-800 mb-2">零漏接</h3>
-                        <p class="text-gray-600 text-sm">智能识别重要短信，确保您不会错过任何关键信息</p>
-                    </div>
-                </div>
-                <div class="flex items-start">
-                    <span class="material-icons text-3xl text-blue-500 mr-4 mt-1">bolt</span>
-                    <div>
-                        <h3 class="font-semibold text-gray-800 mb-2">即时性</h3>
-                        <p class="text-gray-600 text-sm">秒级转发，重要信息第一时间送达</p>
-                    </div>
-                </div>
-                <div class="flex items-start">
-                    <span class="material-icons text-3xl text-blue-500 mr-4 mt-1">smartphone</span>
-                    <div>
-                        <h3 class="font-semibold text-gray-800 mb-2">简单易用</h3>
-                        <p class="text-gray-600 text-sm">简洁界面，一键设置，老人小孩都能轻松使用</p>
-                    </div>
-                </div>
-                <div class="flex items-start">
-                    <span class="material-icons text-3xl text-blue-500 mr-4 mt-1">battery_full</span>
-                    <div>
-                        <h3 class="font-semibold text-gray-800 mb-2">低功耗</h3>
-                        <p class="text-gray-600 text-sm">优化算法，最小化电池消耗，长时间稳定运行</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- 下载引导区 -->
-        <section class="px-4 py-12 text-center">
-    <h2 class="text-3xl font-bold gradient-text mb-4">立即开始使用</h2>
-    <p class="text-gray-600 mb-8">下载短信转发助手，让重要短信不再错过</p>
-
-    <!-- 推荐使用 <a>，保持按钮外观 -->
-    <a
-      href="https://github.com/lanbing1989/sms-forwarder/releases/"
-      target="_blank"
-      rel="noopener noreferrer"
-      class="download-button inline-flex items-center justify-center text-white font-semibold py-4 px-8 rounded-full text-lg shadow-lg"
-      data-testid="download-button"
-      aria-label="在新标签页打开 GitHub Releases 页面，下载 Android 版本">
-        <span class="material-icons align-middle mr-2" aria-hidden="true">android</span>
-        下载 Android 版本
-    </a>
-
-    <p class="text-sm text-gray-500 mt-4">支持 Android 8.0 及以上版本</p>
-</section>
-
-        <!-- 页脚区域 -->
-        <footer class="px-4 py-8 bg-white bg-opacity-30 border-t border-gray-200">
-            <div class="max-w-4xl mx-auto text-center">
-                <div class="flex flex-col md:flex-row justify-center items-center space-y-4 md:space-y-0 md:space-x-8">
-                    <a href="privacy.html" class="text-blue-500 hover:text-blue-600 transition-colors flex items-center" data-testid="privacy-link">
-                        <span class="material-icons text-sm mr-1">privacy_tip</span>
-                        隐私政策
+                <h1>
+                    再也不错过
+                    <span class="gradient-text">任何重要短信</span>
+                </h1>
+                <p>手机收到的验证码、快递通知、银行提醒，即时转发到你的微信、钉钉、另一台手机，工作生活两不误。</p>
+                <div class="hero-buttons">
+                    <a href="#download" class="btn btn-primary">
+                        <span>⬇️</span>
+                        <span>立即下载</span>
                     </a>
-                    <a href="#" class="text-blue-500 hover:text-blue-600 transition-colors flex items-center" onclick="showTerms(); return false;" data-testid="terms-link">
-                        <span class="material-icons text-sm mr-1">description</span>
-                        服务条款
-                    </a>
-                    <a href="#" class="text-blue-500 hover:text-blue-600 transition-colors flex items-center" onclick="showSupport(); return false;" data-testid="support-link">
-                        <span class="material-icons text-sm mr-1">support_agent</span>
-                        客户支持
+                    <a href="#tutorial" class="btn btn-secondary">
+                        <span>📖</span>
+                        <span>查看教程</span>
                     </a>
                 </div>
-                <div class="mt-6 text-sm text-gray-500">
-                    <p>© 2025 短信转发助手. 保留所有权利.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="scenarios" id="scenarios">
+        <div class="container">
+            <div class="section-header fade-in">
+                <h2>为什么需要它？</h2>
+                <p>这些场景你一定遇到过</p>
+            </div>
+            <div class="scenarios-grid">
+                <div class="scenario-card fade-in">
+                    <div class="scenario-icon" style="background: rgba(102, 126, 234, 0.1); color: #667EEA;">🏢</div>
+                    <h3>工作手机放家里</h3>
+                    <p>把工作卡放在备用机里，客户短信、验证码即时转发到你的主力机，不用再带两台手机出门。</p>
+                </div>
+                <div class="scenario-card fade-in">
+                    <div class="scenario-icon" style="background: rgba(16, 185, 129, 0.1); color: #10B981;">📦</div>
+                    <h3>快递通知不漏接</h3>
+                    <p>快递取件码、物流提醒，自动转发给家人或者你的工作微信，不会错过任何包裹。</p>
+                </div>
+                <div class="scenario-card fade-in">
+                    <div class="scenario-icon" style="background: rgba(245, 158, 11, 0.1); color: #F59E0B;">🔐</div>
+                    <h3>验证码秒收到</h3>
+                    <p>银行卡、网站登录验证码，第一时间转发到你常用的聊天软件，复制粘贴超方便。</p>
+                </div>
+                <div class="scenario-card fade-in">
+                    <div class="scenario-icon" style="background: rgba(118, 75, 162, 0.1); color: #764BA2;">👨‍👩‍👧</div>
+                    <h3>家人短信放心上</h3>
+                    <p>把父母手机的短信转发给自己，银行扣费、医疗通知，帮家人留意重要消息。</p>
+                </div>
+                <div class="scenario-card fade-in">
+                    <div class="scenario-icon" style="background: rgba(6, 182, 212, 0.1); color: #06B6D4;">🌍</div>
+                    <h3>出国旅游也能用</h3>
+                    <p>出国时把国内手机卡放家里，短信自动转发到你在国外用的手机或微信，国内消息不耽误。</p>
+                </div>
+                <div class="scenario-card fade-in">
+                    <div class="scenario-icon" style="background: rgba(239, 68, 68, 0.1); color: #EF4444;">🎮</div>
+                    <h3>游戏账号更安全</h3>
+                    <p>专门的游戏手机号放在备用机，登录验证码、安全提醒即时转发，游戏账号安全有保障。</p>
                 </div>
             </div>
-        </footer>
-    </div>
+        </div>
+    </section>
 
-    <script src="app.js"></script>
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-header fade-in">
+                <h2>好用的功能</h2>
+                <p>简单但强大，满足你的各种需求</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card fade-in">
+                    <div class="feature-icon gradient-bg">💬</div>
+                    <h3>支持多种转发方式</h3>
+                    <p>可以转发到企业微信、钉钉、飞书，也可以转发到另一台手机，甚至自定义你的服务器地址。</p>
+                </div>
+                <div class="feature-card fade-in">
+                    <div class="feature-icon" style="background: rgba(16, 185, 129, 0.1); color: #10B981;">🔑</div>
+                    <h3>验证码自动高亮</h3>
+                    <p>收到验证码短信，自动帮你标出来，复制的时候一眼就能找到，不用在一堆文字里找半天。</p>
+                </div>
+                <div class="feature-card fade-in">
+                    <div class="feature-icon" style="background: rgba(102, 126, 234, 0.1); color: #667EEA;">🎯</div>
+                    <h3>想转什么就转什么</h3>
+                    <p>设置关键词，比如"验证码"、"快递"，只有符合的短信才会转发，不想转的一条都不会打扰你。</p>
+                </div>
+                <div class="feature-card fade-in">
+                    <div class="feature-icon" style="background: rgba(118, 75, 162, 0.1); color: #764BA2;">📱</div>
+                    <h3>双卡手机也能用</h3>
+                    <p>双卡双待手机，能看到是哪张卡收到的短信，转发的时候一起告诉你，清清楚楚不混淆。</p>
+                </div>
+                <div class="feature-card fade-in">
+                    <div class="feature-icon" style="background: rgba(245, 158, 11, 0.1); color: #F59E0B;">🔄</div>
+                    <h3>失败了自动重试</h3>
+                    <p>网络不好没发出去？不用担心，APP会自动重试，确保重要消息一定能送达。</p>
+                </div>
+                <div class="feature-card fade-in">
+                    <div class="feature-icon" style="background: rgba(59, 130, 246, 0.1); color: #3B82F6;">🛡️</div>
+                    <h3>稳定后台运行</h3>
+                    <p>APP会一直在后台运行，不会被系统杀掉，小米、华为等手机也能稳定使用。</p>
+                </div>
+            </div>
+        </div>
+    </section>
 
-</body></html>
+    <section class="tutorial" id="tutorial">
+        <div class="container">
+            <div class="section-header fade-in">
+                <h2>3步搞定，超简单</h2>
+                <p>花2分钟设置好，以后就不用管了</p>
+            </div>
+            <div class="steps">
+                <div class="step fade-in">
+                    <div class="step-number">1</div>
+                    <h3>下载安装APP</h3>
+                    <p>下载APP并安装到你的备用机或工作手机上，打开后授予短信权限。</p>
+                </div>
+                <div class="step fade-in">
+                    <div class="step-number">2</div>
+                    <h3>添加转发通道</h3>
+                    <p>选择你要用的转发方式（比如企业微信），按照提示填好配置信息。</p>
+                </div>
+                <div class="step fade-in">
+                    <div class="step-number">3</div>
+                    <h3>开启服务</h3>
+                    <p>点击"开启服务"按钮，就这么简单！以后收到短信就会自动转发啦。</p>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 60px;" class="fade-in">
+                <div style="display: inline-block; background: rgba(102, 126, 234, 0.08); border: 1px dashed rgba(102, 126, 234, 0.3); border-radius: 16px; padding: 28px 40px; max-width: 560px;">
+                    <p style="color: var(--text-gray); font-size: 15px; line-height: 1.8;">
+                        <strong>💡 小提示：</strong><br>
+                        如果你的手机是小米、华为、OPPO、vivo这些品牌，建议在手机管家里给APP加个"后台保护"或"自启动"权限，这样APP就能一直稳定运行啦！
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="download" id="download">
+        <div class="container">
+            <div class="download-content">
+                <div class="download-card fade-in">
+                    <h2>现在就开始用吧！</h2>
+                    <p>完全免费，没有广告，放心下载</p>
+                    <div class="version-info">
+                        <div class="version-item">
+                            <div class="value">v2.7.6</div>
+                            <div class="label">最新版本</div>
+                        </div>
+                        <div class="version-item">
+                            <div class="value">约12MB</div>
+                            <div class="label">安装包大小</div>
+                        </div>
+                        <div class="version-item">
+                            <div class="value">Android 5.0+</div>
+                            <div class="label">手机要求</div>
+                        </div>
+                    </div>
+                    <a href="https://github.com/jinghong-me/sms-forwarder/releases" target="_blank" class="btn btn-primary" style="width: 100%; justify-content: center;">
+                        <span>📥</span>
+                        <span>下载 Android APK</span>
+                    </a>
+                    <p style="margin-top: 16px; font-size: 13px; color: var(--text-gray);">
+                        也可以去 <a href="https://github.com/jinghong-me/sms-forwarder" target="_blank" style="color: var(--primary); text-decoration: none;">GitHub</a> 看看源代码
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <h3>短信转发助手</h3>
+                    <p>一款简单好用的短信转发工具，帮你不错过任何重要消息。完全免费，没有广告，保护你的隐私。</p>
+                </div>
+                <div class="footer-links">
+                    <h4>快速链接</h4>
+                    <a href="#scenarios">使用场景</a>
+                    <a href="#features">功能特点</a>
+                    <a href="#tutorial">使用方法</a>
+                    <a href="#download">下载</a>
+                </div>
+                <div class="footer-links">
+                    <h4>其他</h4>
+                    <a href="privacy.html">隐私政策</a>
+                    <a href="https://github.com/jinghong-me/sms-forwarder" target="_blank">GitHub</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2026 华昊科技有限公司. All rights reserved.</p>
+                <div class="footer-icp">
+                    <a href="https://smsforwarder.cn/" target="_blank">官方网站</a>
+                    <a href="https://beian.miit.gov.cn/" target="_blank">鲁ICP备2026012160号-1</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        window.addEventListener('scroll', function() {
+            const navbar = document.getElementById('navbar');
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -40px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.fade-in').forEach(el => {
+            observer.observe(el);
+        });
+
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
