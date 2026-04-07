@@ -238,26 +238,31 @@ class SmsReceiver : BroadcastReceiver() {
         
         // 尝试从 intent 中获取 subscriptionId
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
-            subscriptionId = intent.getIntExtra("subscription", -1)
-            if (subscriptionId == -1) {
-                subscriptionId = intent.getIntExtra("slot", -1)
-                if (subscriptionId != -1) {
-                    // slot 转换为 subscriptionId
-                    try {
-                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {
-                            val subscriptionManager = SubscriptionManager.from(context)
-                            val activeSubscriptions = subscriptionManager.activeSubscriptionInfoList
-                            if (activeSubscriptions != null && activeSubscriptions.size > subscriptionId) {
-                                subscriptionId = activeSubscriptions[subscriptionId].subscriptionId
+            try {
+                subscriptionId = intent.getIntExtra("subscription", -1)
+                if (subscriptionId == -1) {
+                    subscriptionId = intent.getIntExtra("slot", -1)
+                    if (subscriptionId != -1) {
+                        // slot 转换为 subscriptionId
+                        try {
+                            if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {
+                                val subscriptionManager = SubscriptionManager.from(context)
+                                val activeSubscriptions = subscriptionManager.activeSubscriptionInfoList
+                                if (activeSubscriptions != null && subscriptionId >= 0 && activeSubscriptions.size > subscriptionId) {
+                                    subscriptionId = activeSubscriptions[subscriptionId].subscriptionId
+                                }
                             }
+                        } catch (e: Exception) {
+                            Log.e(TAG, "转换 slot 为 subscriptionId 失败", e)
+                            subscriptionId = null
                         }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "转换 slot 为 subscriptionId 失败", e)
+                    } else {
                         subscriptionId = null
                     }
-                } else {
-                    subscriptionId = null
                 }
+            } catch (e: Exception) {
+                Log.e(TAG, "获取 subscriptionId 失败", e)
+                subscriptionId = null
             }
         }
 
@@ -388,10 +393,16 @@ class SmsReceiver : BroadcastReceiver() {
                     if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {
                         val subscriptionManager = SubscriptionManager.from(context)
                         val activeSubscriptions = subscriptionManager.activeSubscriptionInfoList
-                        activeSubscriptions?.forEachIndexed { index, subInfo ->
-                            if (subInfo.subscriptionId == subscriptionId) {
-                                simSlotIndex = index + 1 // slot 从 1 开始
-                                foundMatchingSim = true
+                        if (activeSubscriptions != null) {
+                            activeSubscriptions.forEachIndexed { index, subInfo ->
+                                try {
+                                    if (subInfo != null && subInfo.subscriptionId == subscriptionId) {
+                                        simSlotIndex = index + 1 // slot 从 1 开始
+                                        foundMatchingSim = true
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "检查 subscriptionInfo 失败", e)
+                                }
                             }
                         }
                     }
@@ -420,8 +431,11 @@ class SmsReceiver : BroadcastReceiver() {
                     try {
                         val subscriptionManager = SubscriptionManager.from(context)
                         val subInfo = subscriptionManager.getActiveSubscriptionInfo(subscriptionId)
-                        if (subInfo != null && !subInfo.number.isNullOrBlank()) {
-                            return subInfo.number
+                        if (subInfo != null) {
+                            val number = subInfo.number
+                            if (!number.isNullOrBlank()) {
+                                return number
+                            }
                         }
                     } catch (e: Exception) {
                         Log.e(TAG, "通过 subscriptionId 获取号码失败", e)
@@ -429,18 +443,21 @@ class SmsReceiver : BroadcastReceiver() {
                 }
 
                 // 回退到默认的获取方式
-                val telephonyManager = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    val number = telephonyManager.line1Number
-                    if (!number.isNullOrBlank()) {
-                        return number
+                try {
+                    val telephonyManager = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
+                    if (telephonyManager != null) {
+                        val number = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            telephonyManager.line1Number
+                        } else {
+                            @Suppress("DEPRECATION")
+                            telephonyManager.line1Number
+                        }
+                        if (!number.isNullOrBlank()) {
+                            return number
+                        }
                     }
-                } else {
-                    @Suppress("DEPRECATION")
-                    val number = telephonyManager.line1Number
-                    if (!number.isNullOrBlank()) {
-                        return number
-                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "通过 TelephonyManager 获取号码失败", e)
                 }
             } else {
                 Log.d(TAG, "没有 READ_PHONE_STATE 权限，无法自动获取本机号码")

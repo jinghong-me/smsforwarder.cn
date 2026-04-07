@@ -1615,9 +1615,14 @@ private fun getSimCardInfo(context: Context, customSim1Phone: String? = null, cu
             return simCards
         }
 
-        val subscriptionManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
-            SubscriptionManager.from(context)
-        } else {
+        val subscriptionManager = try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
+                SubscriptionManager.from(context)
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            Log.e("SimCardInfo", "获取 SubscriptionManager 失败", e)
             null
         }
 
@@ -1625,20 +1630,28 @@ private fun getSimCardInfo(context: Context, customSim1Phone: String? = null, cu
         var addedSim2 = false
         
         if (subscriptionManager != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
-            val activeSubscriptions = subscriptionManager.activeSubscriptionInfoList
-            activeSubscriptions?.forEachIndexed { index, subInfo ->
-                val slotIndex = index + 1
-                val customPhone = if (slotIndex == 1) customSim1Phone else if (slotIndex == 2) customSim2Phone else null
-                val phoneNumber = customPhone ?: subInfo.number?.takeIf { it.isNotBlank() }
-                simCards.add(
-                    SimCardInfo(
-                        phoneNumber = phoneNumber,
-                        carrierName = subInfo.carrierName?.toString(),
-                        isCustom = customPhone != null
-                    )
-                )
-                if (slotIndex == 1) addedSim1 = true
-                if (slotIndex == 2) addedSim2 = true
+            try {
+                val activeSubscriptions = subscriptionManager.activeSubscriptionInfoList
+                activeSubscriptions?.forEachIndexed { index, subInfo ->
+                    try {
+                        val slotIndex = index + 1
+                        val customPhone = if (slotIndex == 1) customSim1Phone else if (slotIndex == 2) customSim2Phone else null
+                        val phoneNumber = customPhone ?: subInfo?.number?.takeIf { it.isNotBlank() }
+                        simCards.add(
+                            SimCardInfo(
+                                phoneNumber = phoneNumber,
+                                carrierName = subInfo?.carrierName?.toString(),
+                                isCustom = customPhone != null
+                            )
+                        )
+                        if (slotIndex == 1) addedSim1 = true
+                        if (slotIndex == 2) addedSim2 = true
+                    } catch (e: Exception) {
+                        Log.e("SimCardInfo", "处理 subscriptionInfo 失败", e)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("SimCardInfo", "获取 activeSubscriptions 失败", e)
             }
         }
 
@@ -1664,21 +1677,32 @@ private fun getSimCardInfo(context: Context, customSim1Phone: String? = null, cu
             
             // 如果没有自定义号码，尝试获取默认号码
             if (simCards.isEmpty()) {
-                val telephonyManager = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-                val phoneNumber = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    telephonyManager.line1Number
-                } else {
-                    @Suppress("DEPRECATION")
-                    telephonyManager.line1Number
-                }
-                if (!phoneNumber.isNullOrBlank()) {
-                    simCards.add(
-                        SimCardInfo(
-                            phoneNumber = phoneNumber,
-                            carrierName = telephonyManager.networkOperatorName,
-                            isCustom = false
-                        )
-                    )
+                try {
+                    val telephonyManager = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
+                    if (telephonyManager != null) {
+                        val phoneNumber = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            telephonyManager.line1Number
+                        } else {
+                            @Suppress("DEPRECATION")
+                            telephonyManager.line1Number
+                        }
+                        val carrierName = try {
+                            telephonyManager.networkOperatorName
+                        } catch (e: Exception) {
+                            null
+                        }
+                        if (!phoneNumber.isNullOrBlank()) {
+                            simCards.add(
+                                SimCardInfo(
+                                    phoneNumber = phoneNumber,
+                                    carrierName = carrierName,
+                                    isCustom = false
+                                )
+                            )
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("SimCardInfo", "获取默认号码失败", e)
                 }
             }
         }
