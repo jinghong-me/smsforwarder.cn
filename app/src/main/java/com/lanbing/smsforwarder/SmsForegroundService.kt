@@ -85,6 +85,8 @@ class SmsForegroundService : Service() {
                     return
                 }
 
+                val lowBatteryReminderEnabled = prefs.getBoolean(Constants.PREF_LOW_BATTERY_REMINDER_ENABLED, true)
+                val highBatteryReminderEnabled = prefs.getBoolean(Constants.PREF_HIGH_BATTERY_REMINDER_ENABLED, true)
                 val lowThreshold = prefs.getInt(Constants.PREF_LOW_BATTERY_THRESHOLD, Constants.DEFAULT_LOW_BATTERY_THRESHOLD)
                 val highThreshold = prefs.getInt(Constants.PREF_HIGH_BATTERY_THRESHOLD, Constants.DEFAULT_HIGH_BATTERY_THRESHOLD)
 
@@ -103,7 +105,7 @@ class SmsForegroundService : Service() {
                 val phoneInfo = getSimPhoneInfo(context, prefs)
 
                 // 低电量提醒：电量低于阈值，且上次提醒的电量高于当前阈值（避免重复提醒）
-                if (batteryPercent <= lowThreshold) {
+                if (lowBatteryReminderEnabled && batteryPercent <= lowThreshold) {
                     if (lastLowRemind == -1 || lastLowRemind > lowThreshold) {
                         var message = "【电量提醒】当前电量：$batteryPercent%，电量较低，请及时充电"
                         if (phoneInfo.isNotEmpty()) {
@@ -121,7 +123,7 @@ class SmsForegroundService : Service() {
                 }
 
                 // 高电量提醒：电量高于阈值，且上次提醒的电量低于当前阈值（避免重复提醒）
-                if (batteryPercent >= highThreshold) {
+                if (highBatteryReminderEnabled && batteryPercent >= highThreshold) {
                     if (lastHighRemind == -1 || lastHighRemind < highThreshold) {
                         var message = "【电量提醒】当前电量：$batteryPercent%，电量充足"
                         if (phoneInfo.isNotEmpty()) {
