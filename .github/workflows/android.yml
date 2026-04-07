@@ -23,6 +23,20 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Decode keystore (from secret) if provided
+        shell: bash
+        run: |
+          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            echo "Decoding keystore..."
+            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ./keystore.jks
+            chmod 600 ./keystore.jks
+          else
+            echo "No KEYSTORE_BASE64 secret provided; skipping keystore decode."
+          fi
+
+      - name: Verify keystore present
+        run: ls -l ./keystore.jks || true
+
       - name: Download and install Gradle 8.2
         run: |
           wget https://services.gradle.org/distributions/gradle-8.2-bin.zip
@@ -31,6 +45,11 @@ jobs:
           gradle --version
 
       - name: Build with Gradle 8.2
+        env:
+          KEYSTORE_FILE: ${{ github.workspace }}/keystore.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           export PATH=$PWD/gradle-8.2/bin:$PATH
           gradle assembleDebug --no-daemon 2>&1 | tee build.log

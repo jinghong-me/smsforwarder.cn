@@ -30,18 +30,27 @@ android {
             val keystoreFileProp = project.findProperty("KEYSTORE_FILE")?.toString()
             val keystoreFilePath = keystoreFileEnv ?: keystoreFileProp
 
+            var hasStoreFile = false
             if (keystoreFilePath != null) {
-                storeFile = file(keystoreFilePath)
+                val keystoreFile = file(keystoreFilePath)
+                if (keystoreFile.exists()) {
+                    storeFile = keystoreFile
+                    hasStoreFile = true
+                }
             } else {
                 val localKeystore = rootProject.file("my-release-key.jks")
                 if (localKeystore.exists()) {
                     storeFile = localKeystore
+                    hasStoreFile = true
                 }
             }
 
-            storePassword = System.getenv("KEYSTORE_PASSWORD") ?: project.findProperty("KEYSTORE_PASSWORD")?.toString()
-            keyAlias = System.getenv("KEY_ALIAS") ?: project.findProperty("KEY_ALIAS")?.toString()
-            keyPassword = System.getenv("KEY_PASSWORD") ?: project.findProperty("KEY_PASSWORD")?.toString()
+            // 只有当 storeFile 存在时，才设置其他签名属性
+            if (hasStoreFile) {
+                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: project.findProperty("KEYSTORE_PASSWORD")?.toString()
+                keyAlias = System.getenv("KEY_ALIAS") ?: project.findProperty("KEY_ALIAS")?.toString()
+                keyPassword = System.getenv("KEY_PASSWORD") ?: project.findProperty("KEY_PASSWORD")?.toString()
+            }
         }
     }
     // ----------------------------------------------------------------------
@@ -51,7 +60,11 @@ android {
             isMinifyEnabled = false
             isShrinkResources = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // debug 构建不使用 release 签名，避免 CI 构建失败
+            // 只有当 release 签名配置完整时，debug 才使用相同签名
+            val releaseConfig = signingConfigs.findByName("release")
+            if (releaseConfig != null && releaseConfig.storeFile != null) {
+                signingConfig = releaseConfig
+            }
         }
         release {
             isMinifyEnabled = true
