@@ -81,6 +81,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var requestSmsPermissionLauncher: ActivityResultLauncher<String>
     private lateinit var requestNotifPermissionLauncher: ActivityResultLauncher<String>
     private var onPermissionChanged: (() -> Unit)? = null
+    private val batteryReceiver = BatteryReceiver()
+    private var isBatteryReceiverRegistered = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -143,6 +145,25 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         // 从设置页面回来时，刷新权限状态
         onPermissionChanged?.invoke()
+        // 注册电量监听
+        if (!isBatteryReceiverRegistered) {
+            val filter = android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+            registerReceiver(batteryReceiver, filter)
+            isBatteryReceiverRegistered = true
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // 注销电量监听
+        if (isBatteryReceiverRegistered) {
+            try {
+                unregisterReceiver(batteryReceiver)
+            } catch (e: Exception) {
+                Log.e("MainActivity", "注销电量监听失败", e)
+            }
+            isBatteryReceiverRegistered = false
+        }
     }
 
     private fun onStopService() {

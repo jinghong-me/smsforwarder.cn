@@ -118,6 +118,7 @@ app/src/main/java/com/lanbing/smsforwarder/
 ├── SmsForegroundService.kt      # 前台服务与通知
 ├── BootReceiver.kt              # 开机启动处理
 ├── NetworkChangeReceiver.kt     # 网络状态监听
+├── BatteryReceiver.kt           # 电量变化监听与提醒
 ├── LogStore.kt                  # 日志存储
 ├── models.kt                    # 数据模型
 └── Constants.kt                 # 常量定义

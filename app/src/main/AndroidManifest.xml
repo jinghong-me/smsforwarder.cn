@@ -56,14 +56,6 @@
             </intent-filter>
         </receiver>
 
-        <receiver
-            android:name=".BatteryReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.intent.action.BATTERY_CHANGED" />
-            </intent-filter>
-        </receiver>
-
         <service
             android:name=".SmsForegroundService"
             android:exported="false"
