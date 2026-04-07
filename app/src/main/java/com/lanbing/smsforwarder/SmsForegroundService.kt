@@ -39,6 +39,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 class SmsForegroundService : Service() {
@@ -49,6 +50,9 @@ class SmsForegroundService : Service() {
         private const val TAG = "SmsForegroundService"
         private const val TAG_BATTERY = "BatteryReceiver"
         private var lastNotificationUpdateTime = 0L
+        
+        // 固定线程池避免线程爆炸
+        private val executor = Executors.newFixedThreadPool(Constants.THREAD_POOL_SIZE)
     }
 
     private val updateReceiver = object : BroadcastReceiver() {
@@ -150,42 +154,46 @@ class SmsForegroundService : Service() {
     private val JSON = "application/json; charset=utf-8".toMediaType()
 
     private fun sendBatteryReminder(context: Context, message: String) {
-        try {
-            val prefs = context.getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE)
-            val channels = loadChannels(prefs)
-            if (channels.isEmpty()) {
-                LogStore.append(context, "电量提醒：未配置通道，已跳过")
-                return
-            }
+        executor.execute {
+            try {
+                val prefs = context.getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE)
+                val channels = loadChannels(prefs)
+                if (channels.isEmpty()) {
+                    LogStore.append(context, "电量提醒：未配置通道，已跳过")
+                    return@execute
+                }
 
-            channels.forEach { channel ->
-                try {
-                    val jsonObject = when (channel.type) {
-                        ChannelType.WECHAT -> buildWechatMessage(message)
-                        ChannelType.DINGTALK -> buildDingtalkMessage(message)
-                        ChannelType.FEISHU -> buildFeishuMessage(message)
-                        ChannelType.GENERIC_WEBHOOK -> buildWebhookMessage(message)
-                    }
-                    val body = jsonObject.toString().toRequestBody(JSON)
-                    val request = Request.Builder()
-                        .url(channel.target)
-                        .post(body)
-                        .build()
+                channels.forEach { channel ->
+                    executor.execute {
+                        try {
+                            val jsonObject = when (channel.type) {
+                                ChannelType.WECHAT -> buildWechatMessage(message)
+                                ChannelType.DINGTALK -> buildDingtalkMessage(message)
+                                ChannelType.FEISHU -> buildFeishuMessage(message)
+                                ChannelType.GENERIC_WEBHOOK -> buildWebhookMessage(message)
+                            }
+                            val body = jsonObject.toString().toRequestBody(JSON)
+                            val request = Request.Builder()
+                                .url(channel.target)
+                                .post(body)
+                                .build()
 
-                    httpClient.newCall(request).execute().use { response ->
-                        if (response.isSuccessful) {
-                            LogStore.append(context, "电量提醒发送成功 -> ${channel.name}")
-                        } else {
-                            LogStore.append(context, "电量提醒发送失败 -> ${channel.name}: ${response.code}")
+                            httpClient.newCall(request).execute().use { response ->
+                                if (response.isSuccessful) {
+                                    LogStore.append(context, "电量提醒发送成功 -> ${channel.name}")
+                                } else {
+                                    LogStore.append(context, "电量提醒发送失败 -> ${channel.name}: ${response.code}")
+                                }
+                            }
+                        } catch (t: Throwable) {
+                            Log.w(TAG_BATTERY, "发送到 ${channel.name} 失败", t)
+                            LogStore.append(context, "电量提醒发送失败 -> ${channel.name}")
                         }
                     }
-                } catch (t: Throwable) {
-                    Log.w(TAG_BATTERY, "发送到 ${channel.name} 失败", t)
-                    LogStore.append(context, "电量提醒发送失败 -> ${channel.name}")
                 }
+            } catch (t: Throwable) {
+                Log.e(TAG_BATTERY, "发送电量提醒失败", t)
             }
-        } catch (t: Throwable) {
-            Log.e(TAG_BATTERY, "发送电量提醒失败", t)
         }
     }
 
