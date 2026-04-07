@@ -105,7 +105,7 @@ class SmsReceiver : BroadcastReceiver() {
                         channelTarget = obj.getString("channelTarget"),
                         sender = obj.getString("sender"),
                         content = obj.getString("content"),
-                        receiverPhoneNumber = obj.optString("receiverPhoneNumber", null),
+                        receiverPhoneNumber = if (obj.has("receiverPhoneNumber")) obj.getString("receiverPhoneNumber") else null,
                         showSenderPhone = obj.optBoolean("showSenderPhone", true),
                         highlightVerificationCode = obj.optBoolean("highlightVerificationCode", true),
                         timestamp = obj.getLong("timestamp"),

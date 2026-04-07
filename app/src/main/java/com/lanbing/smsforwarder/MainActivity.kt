@@ -84,7 +84,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val prefs = getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE)
 
         requestSmsPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             if (granted) Toast.makeText(this, "短信权限已授权", Toast.LENGTH_SHORT).show()
@@ -265,12 +264,6 @@ fun SmsForwarderApp(
         }
     }
 
-    // Page indicator colors
-    val pageColors = listOf(
-        Color(0xFF667EEA), // Purple
-        Color(0xFF10B981)  // Green
-    )
-
     Scaffold(
         modifier = Modifier.background(
             brush = Brush.verticalGradient(
@@ -417,8 +410,7 @@ fun SmsForwarderApp(
                                 }
                                 context.startActivity(intent)
                             }
-                        },
-                        permissionUpdateTrigger = permissionUpdateTrigger
+                        }
                     )
                     1 -> KeywordTab(
                         channels = channels,
@@ -1914,8 +1906,7 @@ fun HomeTab(
     isIgnoringBatteryOptimizations: Boolean,
     onRequestSmsPermission: () -> Unit,
     onRequestNotificationPermission: () -> Unit,
-    onRequestBatteryOptimization: () -> Unit,
-    permissionUpdateTrigger: Int
+    onRequestBatteryOptimization: () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
