@@ -48,7 +48,7 @@
 ### 最新版本
 | 版本 | 说明 | 下载链接 |
 |------|------|----------|
-| **v2.7.7** | 修复SIM卡设置页面电话权限状态不实时更新问题；添加电话权限友好提示；添加开机自启动友好提示；更新隐私政策 | [Releases](https://github.com/jinghong-me/smsforwarder.cn/releases) |
+| **v2.7.7** | 修复SIM卡设置页面电话权限状态不实时更新问题；添加电话权限友好提示；添加开机自启动友好提示；更新隐私政策；新增电量提醒功能；优化APK大小；增强代码健壮性 | [Releases](https://github.com/jinghong-me/smsforwarder.cn/releases) |
 | **v2.7.6** | 修复首页权限状态实时更新问题；关于页面自动获取版本号；添加官方网址和备案号；删除版权信息中的版本号 | [Releases](https://github.com/jinghong-me/smsforwarder.cn/releases) |
 | **v2.7.5** | 更新签名证书，准备 APP 备案 | [Releases](https://github.com/jinghong-me/smsforwarder.cn/releases) |
 | **v2.7.2** | 优化更新对话框和关于对话框按钮样式，统一按钮大小和位置；修复双卡设备 SIM 卡识别 bug，SIM2 收到的短信现在会正确显示 SIM2 的本机号码；优化 subscriptionId 获取方式，提高兼容性 | [Releases](https://github.com/jinghong-me/smsforwarder.cn/releases) |
