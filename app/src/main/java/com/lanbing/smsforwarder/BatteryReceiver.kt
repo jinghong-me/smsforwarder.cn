@@ -10,11 +10,16 @@
 
 package com.lanbing.smsforwarder
 
+import android.Manifest
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.BatteryManager
+import android.telephony.SubscriptionManager
+import android.telephony.TelephonyManager
 import android.util.Log
+import androidx.core.content.ContextCompat
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -65,10 +70,16 @@ class BatteryReceiver : BroadcastReceiver() {
             val lastLowRemind = prefs.getInt(Constants.PREF_LAST_LOW_BATTERY_REMIND_LEVEL, -1)
             val lastHighRemind = prefs.getInt(Constants.PREF_LAST_HIGH_BATTERY_REMIND_LEVEL, -1)
 
+            // 获取 SIM 卡手机号信息
+            val phoneInfo = getSimPhoneInfo(context, prefs)
+
             // 低电量提醒：电量低于阈值，且上次提醒的电量高于当前阈值（避免重复提醒）
             if (batteryPercent <= lowThreshold) {
                 if (lastLowRemind == -1 || lastLowRemind > lowThreshold) {
-                    val message = "【电量提醒】当前电量：$batteryPercent%，电量较低，请及时充电"
+                    var message = "【电量提醒】当前电量：$batteryPercent%，电量较低，请及时充电"
+                    if (phoneInfo.isNotEmpty()) {
+                        message += "\n设备：$phoneInfo"
+                    }
                     sendBatteryReminder(context, channels, message)
                     prefs.edit().putInt(Constants.PREF_LAST_LOW_BATTERY_REMIND_LEVEL, batteryPercent).apply()
                     LogStore.append(context, "电量提醒：低电量 $batteryPercent%")
@@ -83,7 +94,10 @@ class BatteryReceiver : BroadcastReceiver() {
             // 高电量提醒：电量高于阈值，且上次提醒的电量低于当前阈值（避免重复提醒）
             if (batteryPercent >= highThreshold) {
                 if (lastHighRemind == -1 || lastHighRemind < highThreshold) {
-                    val message = "【电量提醒】当前电量：$batteryPercent%，电量充足"
+                    var message = "【电量提醒】当前电量：$batteryPercent%，电量充足"
+                    if (phoneInfo.isNotEmpty()) {
+                        message += "\n设备：$phoneInfo"
+                    }
                     sendBatteryReminder(context, channels, message)
                     prefs.edit().putInt(Constants.PREF_LAST_HIGH_BATTERY_REMIND_LEVEL, batteryPercent).apply()
                     LogStore.append(context, "电量提醒：高电量 $batteryPercent%")
@@ -181,6 +195,73 @@ class BatteryReceiver : BroadcastReceiver() {
             }
         } catch (t: Throwable) {
             emptyList()
+        }
+    }
+
+    private fun getSimPhoneInfo(context: Context, prefs: android.content.SharedPreferences): String {
+        val phoneNumbers = mutableListOf<String>()
+        
+        // 优先使用自定义的 SIM 卡号码
+        val customSim1Phone = prefs.getString(Constants.PREF_CUSTOM_SIM1_PHONE, null)
+        val customSim2Phone = prefs.getString(Constants.PREF_CUSTOM_SIM2_PHONE, null)
+        
+        if (!customSim1Phone.isNullOrBlank()) {
+            phoneNumbers.add(customSim1Phone)
+        }
+        if (!customSim2Phone.isNullOrBlank()) {
+            phoneNumbers.add(customSim2Phone)
+        }
+        
+        // 如果有自定义号码，直接返回
+        if (phoneNumbers.isNotEmpty()) {
+            return phoneNumbers.joinToString(" / ")
+        }
+        
+        // 尝试自动获取 SIM 卡号码
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+            return ""
+        }
+        
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP_MR1) {
+                val subscriptionManager = SubscriptionManager.from(context)
+                val activeSubscriptions = subscriptionManager.activeSubscriptionInfoList
+                if (activeSubscriptions != null) {
+                    activeSubscriptions.forEach { subInfo ->
+                        try {
+                            if (subInfo != null && !subInfo.number.isNullOrBlank()) {
+                                phoneNumbers.add(subInfo.number)
+                            }
+                        } catch (e: Exception) {
+                            Log.e(TAG, "获取 SIM 卡号码失败", e)
+                        }
+                    }
+                }
+            }
+            
+            // 如果没有从 SubscriptionManager 获取到，尝试从 TelephonyManager 获取
+            if (phoneNumbers.isEmpty()) {
+                val telephonyManager = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
+                if (telephonyManager != null) {
+                    val number = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                        telephonyManager.line1Number
+                    } else {
+                        @Suppress("DEPRECATION")
+                        telephonyManager.line1Number
+                    }
+                    if (!number.isNullOrBlank()) {
+                        phoneNumbers.add(number)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "获取 SIM 卡信息失败", e)
+        }
+        
+        return if (phoneNumbers.isNotEmpty()) {
+            phoneNumbers.joinToString(" / ")
+        } else {
+            ""
         }
     }
 }
