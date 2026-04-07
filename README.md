@@ -5,9 +5,9 @@
 ![Version](https://img.shields.io/badge/version-2.7.7-blue.svg)
 ![Android](https://img.shields.io/badge/Android-5.0%2B-brightgreen.svg)
 ![License](https://img.shields.io/badge/license-MIT-orange.svg)
-[![GitHub Stars](https://img.shields.io/github/stars/jinghong-me/sms-forwarder?style=social)](https://github.com/jinghong-me/sms-forwarder/stargazers)
+[![GitHub Stars](https://img.shields.io/github/stars/jinghong-me/smsforwarder.cn?style=social)](https://github.com/jinghong-me/smsforwarder.cn/stargazers)
 
-轻量、稳定、开源的 Android 短信转发应用
+轻量、稳定、开源的 Android 短信转发应用。支持企业微信、钉钉、飞书和自定义 Webhook 等多种转发渠道，支持关键词过滤、验证码提取、本机号码识别等功能。
 
 [快速开始](#快速开始) • [功能特性](#功能特性) • [下载安装](#下载安装) • [使用指南](#使用指南)
 
@@ -48,26 +48,26 @@
 ### 最新版本
 | 版本 | 说明 | 下载链接 |
 |------|------|----------|
-| **v2.7.7** | 修复SIM卡设置页面电话权限状态不实时更新问题；添加电话权限友好提示；添加开机自启动友好提示；更新隐私政策 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
-| **v2.7.6** | 修复首页权限状态实时更新问题；关于页面自动获取版本号；添加官方网址和备案号；删除版权信息中的版本号 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
-| **v2.7.5** | 更新签名证书，准备 APP 备案 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
-| **v2.7.2** | 优化更新对话框和关于对话框按钮样式，统一按钮大小和位置；修复双卡设备 SIM 卡识别 bug，SIM2 收到的短信现在会正确显示 SIM2 的本机号码；优化 subscriptionId 获取方式，提高兼容性 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
-| **v2.6.4** | 修复双卡设备 SIM 卡识别 bug，SIM2 收到的短信现在会正确显示 SIM2 的本机号码；优化 subscriptionId 获取方式，提高兼容性 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
-| **v2.6.1** | 更新关于对话框，添加版权信息和软件说明；调整菜单布局，避免功能重复 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
-| **v2.6.0** | 降低最低支持版本到 Android 5.0 (API 21)，支持更多设备 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
-| **v2.5.2** | 调整页面内容分配，首页包含服务开关和开机启动，设置页包含SIM卡和消息格式 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
-| v2.5.1 | 修复自定义 SIM 号码显示逻辑问题，避免重复出现 SIM 卡 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
-| v2.5.0 | 新增底部导航栏，将功能分为首页、关键词、通道、设置、日志5个标签页 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
-| v2.4.1 | 优化自定义 SIM 号码功能，添加更清晰的使用提示 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
-| v2.4.0 | 新增自定义 SIM 号码功能，无法自动获取时支持手动输入 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
-| v2.3.0 | 新增消息格式配置选项、SIM 卡信息预览 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
-| v2.2.0 | 新增本机号码识别，双卡设备支持显示接收短信号码 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
-| v2.1.3 | 修复验证码识别错误，优化提取逻辑 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
-| v2.1.2 | 调整验证码显示顺序，优化消息格式 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
-| v2.1.0 | 验证码自动提取与突出显示 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
-| v2.0.2 | 统一消息前缀格式 | [Releases](https://github.com/jinghong-me/sms-forwarder/releases) |
-| v2.0.1 | 多关键词、多通道 | [v2.0.1](https://github.com/jinghong-me/sms-forwarder/releases/tag/v2.0.1) |
-| v1.1 | 多关键词、单通道 | [v1.1](https://github.com/jinghong-me/sms-forwarder/releases/tag/1.1) |
+| **v2.7.7** | 修复SIM卡设置页面电话权限状态不实时更新问题；添加电话权限友好提示；添加开机自启动友好提示；更新隐私政策 | [Releases](https://github.com/jinghong-me/smsforwarder.cn/releases) |
+| **v2.7.6** | 修复首页权限状态实时更新问题；关于页面自动获取版本号；添加官方网址和备案号；删除版权信息中的版本号 | [Releases](https://github.com/jinghong-me/smsforwarder.cn/releases) |
+| **v2.7.5** | 更新签名证书，准备 APP 备案 | [Releases](https://github.com/jinghong-me/smsforwarder.cn/releases) |
+| **v2.7.2** | 优化更新对话框和关于对话框按钮样式，统一按钮大小和位置；修复双卡设备 SIM 卡识别 bug，SIM2 收到的短信现在会正确显示 SIM2 的本机号码；优化 subscriptionId 获取方式，提高兼容性 | [Releases](https://github.com/jinghong-me/smsforwarder.cn/releases) |
+| **v2.6.4** | 修复双卡设备 SIM 卡识别 bug，SIM2 收到的短信现在会正确显示 SIM2 的本机号码；优化 subscriptionId 获取方式，提高兼容性 | [Releases](https://github.com/jinghong-me/smsforwarder.cn/releases) |
+| **v2.6.1** | 更新关于对话框，添加版权信息和软件说明；调整菜单布局，避免功能重复 | [Releases](https://github.com/jinghong-me/smsforwarder.cn/releases) |
+| **v2.6.0** | 降低最低支持版本到 Android 5.0 (API 21)，支持更多设备 | [Releases](https://github.com/jinghong-me/smsforwarder.cn/releases) |
+| **v2.5.2** | 调整页面内容分配，首页包含服务开关和开机启动，设置页包含SIM卡和消息格式 | [Releases](https://github.com/jinghong-me/smsforwarder.cn/releases) |
+| v2.5.1 | 修复自定义 SIM 号码显示逻辑问题，避免重复出现 SIM 卡 | [Releases](https://github.com/jinghong-me/smsforwarder.cn/releases) |
+| v2.5.0 | 新增底部导航栏，将功能分为首页、关键词、通道、设置、日志5个标签页 | [Releases](https://github.com/jinghong-me/smsforwarder.cn/releases) |
+| v2.4.1 | 优化自定义 SIM 号码功能，添加更清晰的使用提示 | [Releases](https://github.com/jinghong-me/smsforwarder.cn/releases) |
+| v2.4.0 | 新增自定义 SIM 号码功能，无法自动获取时支持手动输入 | [Releases](https://github.com/jinghong-me/smsforwarder.cn/releases) |
+| v2.3.0 | 新增消息格式配置选项、SIM 卡信息预览 | [Releases](https://github.com/jinghong-me/smsforwarder.cn/releases) |
+| v2.2.0 | 新增本机号码识别，双卡设备支持显示接收短信号码 | [Releases](https://github.com/jinghong-me/smsforwarder.cn/releases) |
+| v2.1.3 | 修复验证码识别错误，优化提取逻辑 | [Releases](https://github.com/jinghong-me/smsforwarder.cn/releases) |
+| v2.1.2 | 调整验证码显示顺序，优化消息格式 | [Releases](https://github.com/jinghong-me/smsforwarder.cn/releases) |
+| v2.1.0 | 验证码自动提取与突出显示 | [Releases](https://github.com/jinghong-me/smsforwarder.cn/releases) |
+| v2.0.2 | 统一消息前缀格式 | [Releases](https://github.com/jinghong-me/smsforwarder.cn/releases) |
+| v2.0.1 | 多关键词、多通道 | [v2.0.1](https://github.com/jinghong-me/smsforwarder.cn/releases/tag/v2.0.1) |
+| v1.1 | 多关键词、单通道 | [v1.1](https://github.com/jinghong-me/smsforwarder.cn/releases/tag/1.1) |
 
 ---
 
@@ -126,8 +126,8 @@ app/src/main/java/com/lanbing/smsforwarder/
 ### 本地构建
 ```bash
 # 克隆仓库
-git clone https://github.com/jinghong-me/sms-forwarder.git
-cd sms-forwarder
+git clone https://github.com/jinghong-me/smsforwarder.cn.git
+cd smsforwarder.cn
 
 # 构建 Debug APK
 ./gradlew clean :app:assembleDebug
@@ -203,7 +203,7 @@ A: 检查：
 
 ## 📞 联系方式
 
-- **GitHub Issues**：[提交问题](https://github.com/jinghong-me/sms-forwarder/issues)
+- **GitHub Issues**：[提交问题](https://github.com/jinghong-me/smsforwarder.cn/issues)
 - **问题反馈请附上**：
   - 设备型号与系统版本
   - 完整的 adb logcat
