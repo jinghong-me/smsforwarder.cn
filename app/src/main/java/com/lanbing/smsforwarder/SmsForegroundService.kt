@@ -75,14 +75,14 @@ class SmsForegroundService : Service() {
                 if (action != Intent.ACTION_BATTERY_CHANGED) return
 
                 val prefs = getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE)
-                val batteryEnabled = prefs.getBoolean(Constants.PREF_BATTERY_REMIND_ENABLED, false)
+                val batteryEnabled = prefs.getBoolean(Constants.PREF_BATTERY_REMINDER_ENABLED, false)
                 if (!batteryEnabled) {
                     Log.d(TAG_BATTERY, "电量提醒未开启，已跳过")
                     return
                 }
 
-                val lowThreshold = prefs.getInt(Constants.PREF_BATTERY_LOW_THRESHOLD, 10)
-                val highThreshold = prefs.getInt(Constants.PREF_BATTERY_HIGH_THRESHOLD, 90)
+                val lowThreshold = prefs.getInt(Constants.PREF_LOW_BATTERY_THRESHOLD, Constants.DEFAULT_LOW_BATTERY_THRESHOLD)
+                val highThreshold = prefs.getInt(Constants.PREF_HIGH_BATTERY_THRESHOLD, Constants.DEFAULT_HIGH_BATTERY_THRESHOLD)
 
                 val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
                 val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
@@ -164,7 +164,7 @@ class SmsForegroundService : Service() {
                         ChannelType.WECHAT -> buildWechatMessage(message)
                         ChannelType.DINGTALK -> buildDingtalkMessage(message)
                         ChannelType.FEISHU -> buildFeishuMessage(message)
-                        ChannelType.WEBHOOK -> buildWebhookMessage(message)
+                        ChannelType.GENERIC_WEBHOOK -> buildWebhookMessage(message)
                     }
                     val body = jsonObject.toString().toRequestBody(JSON)
                     val request = Request.Builder()
