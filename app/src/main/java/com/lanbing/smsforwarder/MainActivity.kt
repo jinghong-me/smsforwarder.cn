@@ -707,7 +707,7 @@ fun SmsForwarderApp(
         )
     }
 
-    // About Dialog
+    // 关于对话框
     if (showAboutDialog) {
         AboutDialog(onDismiss = { showAboutDialog = false })
     }

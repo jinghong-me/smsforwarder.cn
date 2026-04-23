@@ -66,7 +66,7 @@ class SmsForegroundService : Service() {
                 }
                 updateNotification()
             } catch (t: Throwable) {
-                Log.w(TAG, "updateNotification failed", t)
+                Log.w(TAG, "更新通知失败", t)
             }
         }
     }
@@ -324,7 +324,7 @@ class SmsForegroundService : Service() {
             }
             registerReceiver(updateReceiver, filter)
         } catch (t: Throwable) {
-            Log.w(TAG, "registerReceiver failed", t)
+            Log.w(TAG, "注册接收器失败", t)
         }
         try {
             val batteryFilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
@@ -350,18 +350,18 @@ class SmsForegroundService : Service() {
                     channel.lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
                     nm.createNotificationChannel(channel)
                 } else {
-                    Log.w(TAG, "NotificationManager is null when creating channel")
+                    Log.w(TAG, "创建通道时NotificationManager为null")
                 }
             }
         } catch (t: Throwable) {
-            Log.w(TAG, "createChannel failed", t)
+            Log.w(TAG, "创建通道失败", t)
         }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // 检查通知权限
         if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) {
-            Log.w(TAG, "Notification permission not granted, cannot start foreground service")
+            Log.w(TAG, "通知权限未授予，无法启动前台服务")
             LogStore.append(applicationContext, "错误：缺少通知权限，无法启动前台服务")
             stopSelf()
             return START_NOT_STICKY
@@ -370,7 +370,7 @@ class SmsForegroundService : Service() {
         val notification: Notification = try {
             buildNotification()
         } catch (t: Throwable) {
-            Log.w(TAG, "buildNotification failed, use fallback", t)
+            Log.w(TAG, "构建通知失败，使用回退方案", t)
             // fallback: 直接使用编译时资源，确保 smallIcon 不会回退到系统占位
             NotificationCompat.Builder(this, Constants.NOTIFICATION_CHANNEL_ID)
                 .setContentTitle("短信转发助手")
@@ -386,15 +386,15 @@ class SmsForegroundService : Service() {
                 if (type != 0) {
                     startForeground(Constants.NOTIFICATION_ID, notification, type)
                 } else {
-                    Log.w(TAG, "FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING not found via reflection, calling startForeground without type")
+                    Log.w(TAG, "通过反射未找到FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING，无类型调用startForeground")
                     startForeground(Constants.NOTIFICATION_ID, notification)
                 }
             } else {
                 startForeground(Constants.NOTIFICATION_ID, notification)
             }
         } catch (t: Throwable) {
-            Log.w(TAG, "startForeground failed, stopping service", t)
-            LogStore.append(applicationContext, "ERROR: startForeground failed: ${t.javaClass.simpleName} ${t.message}")
+            Log.w(TAG, "启动前台服务失败，正在停止服务", t)
+            LogStore.append(applicationContext, "错误: startForeground 失败: ${t.javaClass.simpleName} ${t.message}")
             stopSelf()
             return START_NOT_STICKY
         }
@@ -413,7 +413,7 @@ class SmsForegroundService : Service() {
             val nm2 = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
             nm2?.notify(Constants.NOTIFICATION_ID, notification)
         } catch (t: Throwable) {
-            Log.w(TAG, "extra notify failed", t)
+            Log.w(TAG, "额外通知失败", t)
         }
         return START_STICKY
     }
@@ -424,7 +424,7 @@ class SmsForegroundService : Service() {
             val field = cls.getField("FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING")
             (field.getInt(null))
         } catch (t: Throwable) {
-            Log.w(TAG, "Failed to read FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING via reflection: ${t.message}")
+            Log.w(TAG, "通过反射读取FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING失败: ${t.message}")
             0
         }
     }
@@ -467,7 +467,7 @@ class SmsForegroundService : Service() {
                 if (bmp != null) builder.setLargeIcon(bmp)
             }
         } catch (t: Throwable) {
-            Log.w(TAG, "setLargeIcon failed: ${t.message}")
+            Log.w(TAG, "设置大图标失败: ${t.message}")
         }
 
         val piFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -512,7 +512,7 @@ class SmsForegroundService : Service() {
     private fun updateNotification() {
         val now = System.currentTimeMillis()
         if (now - lastNotificationUpdateTime < Constants.NOTIFICATION_UPDATE_THROTTLE_MS) {
-            Log.d(TAG, "Skipping notification update due to throttling")
+            Log.d(TAG, "由于节流限制跳过通知更新")
             return
         }
         lastNotificationUpdateTime = now
@@ -520,7 +520,7 @@ class SmsForegroundService : Service() {
             val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             nm.notify(Constants.NOTIFICATION_ID, buildNotification())
         } catch (t: Throwable) {
-            Log.w(TAG, "updateNotification failed", t)
+            Log.w(TAG, "更新通知失败", t)
         }
     }
 

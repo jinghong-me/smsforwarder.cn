@@ -11,7 +11,7 @@
 package com.lanbing.smsforwarder
 
 /**
- * Shared model types for channels and keyword rules.
+ * 通道和关键词规则的共享模型类型
  */
 enum class ChannelType { WECHAT, DINGTALK, FEISHU, GENERIC_WEBHOOK }
 

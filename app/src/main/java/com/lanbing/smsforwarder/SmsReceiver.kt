@@ -148,8 +148,8 @@ class SmsReceiver : BroadcastReceiver() {
                     failedMessages.take(Constants.MAX_FAILED_MESSAGES).forEach { arr.put(it.toJSONObject()) }
                     file.writeText(arr.toString())
                 } catch (t: Throwable) {
-                    Log.e(TAG, "Failed to save failed messages", t)
-                }
+            Log.e(TAG, "保存失败消息失败", t)
+        }
             }
         }
 
@@ -164,8 +164,8 @@ class SmsReceiver : BroadcastReceiver() {
                         failedMessages.add(FailedMessage.fromJSONObject(arr.getJSONObject(i)))
                     }
                 } catch (t: Throwable) {
-                    Log.e(TAG, "Failed to load failed messages", t)
-                }
+            Log.e(TAG, "加载失败消息失败", t)
+        }
             }
         }
 
@@ -202,7 +202,7 @@ class SmsReceiver : BroadcastReceiver() {
                                 }
                             }
                         } catch (e: Exception) {
-                            Log.e(TAG, "retry failed", e)
+                            Log.e(TAG, "重试失败", e)
                         }
                     }
                 }
@@ -282,7 +282,7 @@ class SmsReceiver : BroadcastReceiver() {
             cleanupRecentMessages()
             val lastTime = recentMessages[messageKey]
             if (lastTime != null && (now - lastTime) < Constants.DUPLICATE_WINDOW_MS) {
-                Log.d(TAG, "跳过重复消息: sender=$sender")
+                Log.d(TAG, "跳过重复消息: 发送者=$sender")
                 return
             }
             recentMessages[messageKey] = now
@@ -326,8 +326,8 @@ class SmsReceiver : BroadcastReceiver() {
                                     try {
                                         success = sendToWebhook(ch.target, sender, fullMessage, receiverPhoneNumber, ch.type, showSenderPhone, highlightVerificationCode)
                                     } catch (e: Exception) {
-                                        Log.e(TAG, "send attempt ${attempt+1} failed to ${ch.target}", e)
-                                    }
+                                    Log.e(TAG, "发送尝试 ${attempt+1} 失败到 ${ch.target}", e)
+                                }
                                     attempt++
                                     if (!success) backoff = Constants.INITIAL_RETRY_BACKOFF_MS * attempt
                                 }
@@ -352,7 +352,7 @@ class SmsReceiver : BroadcastReceiver() {
                 val completed = try {
                     latch.await(Constants.BROADCAST_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                 } catch (e: InterruptedException) {
-                    Log.w(TAG, "await interrupted", e)
+                    Log.w(TAG, "等待被中断", e)
                     false
                 }
                 if (!completed) {
@@ -362,7 +362,7 @@ class SmsReceiver : BroadcastReceiver() {
                 // 保存失败消息
                 saveFailedMessages(context)
             } catch (t: Throwable) {
-                Log.e(TAG, "unexpected error in parallel send worker", t)
+                Log.e(TAG, "并行发送工作线程中发生意外错误", t)
             } finally {
                 pendingResult.finish()
             }

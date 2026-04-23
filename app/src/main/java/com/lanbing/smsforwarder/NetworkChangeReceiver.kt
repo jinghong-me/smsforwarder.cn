@@ -59,7 +59,7 @@ class NetworkChangeReceiver : BroadcastReceiver() {
                 networkInfo?.isConnected == true
             }
         } catch (t: Throwable) {
-            Log.e(TAG, "Error checking network availability", t)
+            Log.e(TAG, "检查网络可用性时出错", t)
             false
         }
     }
